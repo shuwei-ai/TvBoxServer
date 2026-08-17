@@ -1,0 +1,62 @@
+name: Backend Docker Build & Push
+
+on:
+  workflow_dispatch:
+    inputs:
+      dest_image:
+        description: '目标镜像地址 (Destination Image)'
+        required: true
+        default: 'registry.cnbita.com:5000/hero-dev/tvbox-ai-controller:latest'
+      dest_user:
+        description: '目标仓库用户名 (Destination Username)'
+        required: false
+        default: ''
+      dest_pass:
+        description: '目标仓库密码 (Destination Password)'
+        required: false
+        default: ''
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Image
+        run: |
+          echo "Building Docker image for Backend..."
+          docker build -t tvbox-ai-controller:latest ./backend
+
+      - name: Install Skopeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+
+      - name: Push Image with Skopeo
+        run: |
+          # 格式化目标镜像地址，补全 docker:// 前缀
+          DEST_IMAGE="${{ github.event.inputs.dest_image }}"
+          if [[ $DEST_IMAGE != docker://* ]]; then
+            DEST_IMAGE="docker://$DEST_IMAGE"
+          fi
+
+          echo "Starting copy from docker-daemon:tvbox-ai-controller:latest to $DEST_IMAGE..."
+
+          # 判断是否传入了账号密码凭据
+          CREDS_ARG=""
+          if [[ -n "${{ github.event.inputs.dest_user }}" && -n "${{ github.event.inputs.dest_pass }}" ]]; then
+            CREDS_ARG="--dest-creds=${{ github.event.inputs.dest_user }}:${{ github.event.inputs.dest_pass }}"
+          fi
+
+          # 执行高效推送（禁用目标 TLS 验证以兼容自签名证书或私有 Harbor）
+          skopeo copy \
+            --dest-tls-verify=false \
+            $CREDS_ARG \
+            docker-daemon:tvbox-ai-controller:latest \
+            $DEST_IMAGE
+
+          echo "Docker image successfully pushed to $DEST_IMAGE"
