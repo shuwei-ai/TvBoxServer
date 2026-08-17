@@ -1,0 +1,31 @@
+services:
+  mongodb:
+    image: mongo:8.0
+    container_name: tvbox-ai-mongodb
+    restart: unless-stopped
+    volumes:
+      - tvbox_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  controller:
+    build: .
+    image: tvbox-ai-controller:latest
+    container_name: tvbox-ai-controller
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MONGO_URI: mongodb://mongodb:27017
+      MONGO_DATABASE: tvbox_ai
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+volumes:
+  tvbox_mongo_data:
