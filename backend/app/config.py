@@ -13,6 +13,7 @@ class Settings:
     bootstrap_admin_username: str = os.getenv("BOOTSTRAP_ADMIN_USERNAME", "")
     bootstrap_admin_password: str = os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "")
     cors_origins: tuple = tuple(x.strip() for x in os.getenv("CORS_ORIGINS", "").split(",") if x.strip())
+    root_path: str = os.getenv("ROOT_PATH", "")
 
 
 settings = Settings()

@@ -1,6 +1,6 @@
 services:
   mongodb:
-    image: mongo:8.0
+    image: ${MONGO_IMAGE:-mongo:7.0}
     container_name: tvbox-ai-mongodb
     restart: unless-stopped
     volumes:
@@ -19,15 +19,20 @@ services:
     container_name: tvbox-ai-controller
     restart: unless-stopped
     env_file:
-      - .env
+      - path: ../.env
+        required: false
+      - path: .env
+        required: false
     environment:
-      MONGO_URI: mongodb://mongodb:27017
-      MONGO_DATABASE: tvbox_ai
+      MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017}
+      MONGO_DATABASE: ${MONGO_DATABASE:-tvbox_ai}
+      SERVER_PORT: ${SERVER_PORT:-8000}
+      ROOT_PATH: ${ROOT_PATH:-}
     depends_on:
       mongodb:
         condition: service_healthy
     ports:
-      - "8010:8010"
+      - "${SERVER_PORT:-8000}:${SERVER_PORT:-8000}"
     networks:
       - basic_component
 

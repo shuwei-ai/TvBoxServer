@@ -68,6 +68,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL") or os.getenv("LLM_BASE_URL") or "https://api.openai.com/v1"
 LLM_MODEL = os.getenv("LLM_MODEL") or os.getenv("OPENAI_MODEL") or "gpt-4o"
 SERVER_PORT = int(os.getenv("SERVER_PORT", "8000"))
+ROOT_PATH = settings.root_path
 
 masked_key = (OPENAI_API_KEY[:6] + "..." + OPENAI_API_KEY[-4:]) if OPENAI_API_KEY and len(OPENAI_API_KEY) > 10 else "未配置(将使用本地规则解析器)"
 logger.info("=" * 55)
@@ -75,6 +76,7 @@ logger.info("📺 TVBox AI Control Center 启动配置:")
 logger.info(f"   • 大模型引擎: {LLM_MODEL}")
 logger.info(f"   • API BaseURL: {OPENAI_BASE_URL}")
 logger.info(f"   • API Key:    {masked_key}")
+logger.info(f"   • Root Path:  {ROOT_PATH or '/'}")
 logger.info("=" * 55)
 
 @asynccontextmanager
@@ -86,7 +88,7 @@ async def lifespan(_app: FastAPI):
     await repository.close()
 
 
-app = FastAPI(title="TVBox AI Control Center", lifespan=lifespan)
+app = FastAPI(title="TVBox AI Control Center", lifespan=lifespan, root_path=ROOT_PATH)
 
 app.add_middleware(
     CORSMiddleware,
@@ -943,4 +945,4 @@ async def serve_index():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=SERVER_PORT, reload=True)
+    uvicorn.run("server:app", host="0.0.0.0", port=SERVER_PORT, reload=True, root_path=ROOT_PATH)
