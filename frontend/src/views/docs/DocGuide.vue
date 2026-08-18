@@ -113,31 +113,43 @@ function copyText(text: string) {
 }
 
 // 预处理与增强 Markdown
-function processMarkdown(content: string): { processed: string; toc: TocItem[] } {
+function processContent(content: string) {
   const toc: TocItem[] = []
   let headingCounter = 0
 
-  // 1. 处理图片路径：将相对路径如 Screenshot_xxx.jpg 或 docs/Screenshot_xxx.jpg 替换为 /docs/Screenshot_xxx.jpg
-  let text = content.replace(/!\[(.*?)\]\((.*?)\)/g, (_match, alt, src) => {
-    let cleanSrc = src.trim()
-    if (!cleanSrc.startsWith('http') && !cleanSrc.startsWith('/')) {
-      cleanSrc = '/docs/' + cleanSrc.replace(/^docs\//, '')
+  marked.setOptions({
+    gfm: true,
+    breaks: true
+  })
+
+  marked.use({
+    renderer: {
+      heading(token: any) {
+        headingCounter++
+        const rawText = token.text || ''
+        const depth = token.depth || 2
+        const cleanText = rawText.replace(/<[^>]+>/g, '').trim()
+        const id = `heading-${headingCounter}-${cleanText.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')}`
+        if (depth <= 3) {
+          toc.push({ id, text: cleanText, level: depth })
+        }
+        return `<h${depth} id="${id}">${rawText}</h${depth}>\n\n`
+      },
+      image(token: any) {
+        const href = token.href || ''
+        const text = token.text || ''
+        const title = token.title || ''
+        let cleanSrc = href.trim()
+        if (!cleanSrc.startsWith('http') && !cleanSrc.startsWith('/')) {
+          cleanSrc = '/docs/' + cleanSrc.replace(/^docs\//, '')
+        }
+        const titleAttr = title ? ` title="${title}"` : ''
+        return `<img src="${cleanSrc}" alt="${text}"${titleAttr} loading="lazy" />`
+      }
     }
-    return `![${alt}](${cleanSrc})`
   })
-
-  // 2. 解析标题并生成 TOC
-  text = text.replace(/^(#{1,3})\s+(.+)$/gm, (_match, hashes, title) => {
-    headingCounter++
-    const cleanTitle = title.trim()
-    const id = `heading-${headingCounter}-${cleanTitle.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')}`
-    const level = hashes.length
-    toc.push({ id, text: cleanTitle, level })
-    return `<h${level} id="${id}">${cleanTitle}</h${level}>`
-  })
-
-  // 3. 处理 GitHub 风格的 Blockquote Alerts (e.g. > [!IMPORTANT], > [!NOTE], > [!TIP], > [!WARNING])
-  text = text.replace(
+  // 1. 处理 GitHub 风格的 Blockquote Alerts (e.g. > [!IMPORTANT], > [!NOTE], > [!TIP], > [!WARNING])
+  const textWithAlerts = content.replace(
     />\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*\n((?:>.*\n?)*)/gi,
     (_match, type, body) => {
       const cleanType = type.toUpperCase()
@@ -156,24 +168,23 @@ function processMarkdown(content: string): { processed: string; toc: TocItem[] }
       }
 
       const info = typeMap[cleanType] || { title: cleanType, class: 'alert-note' }
-      return `<div class="doc-alert-card ${info.class}">
+      const parsedInner = marked.parse(cleanBody, { gfm: true, breaks: true })
+      return `\n\n<div class="doc-alert-card ${info.class}">
         <div class="alert-header">
           <span class="alert-title">${info.title}</span>
         </div>
-        <div class="alert-body">${marked.parse(cleanBody)}</div>
-      </div>\n`
+        <div class="alert-body">${parsedInner}</div>
+      </div>\n\n`
     }
   )
 
-  return { processed: text, toc }
+  const html = marked.parse(textWithAlerts) as string
+  return { html, toc }
 }
 
-const { processed, toc } = processMarkdown(rawDocMarkdown)
+const { html: renderedHtmlResult, toc } = processContent(rawDocMarkdown)
 tocItems.value = toc
-
-const renderedHtml = computed(() => {
-  return marked.parse(processed)
-})
+const renderedHtml = computed(() => renderedHtmlResult)
 
 // 点击正文处理图片放大和代码复制
 function handleArticleClick(event: MouseEvent) {
