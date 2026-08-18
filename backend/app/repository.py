@@ -435,7 +435,7 @@ class Repository:
     async def rotate_api_key(self, user_id: str) -> Tuple[Dict[str, Any], str, List[str]]:
         raw = generate_api_key()
         doc = {"_id": uuid.uuid4().hex, "user_id": user_id, "name": "默认 API Key", "key_prefix": api_key_prefix(raw),
-               "key_hash": digest_api_key(raw, self.config), "status": "ACTIVE", "created_at": now(), "last_used_at": None, "revoked_at": None}
+               "api_key": raw, "key_hash": digest_api_key(raw, self.config), "status": "ACTIVE", "created_at": now(), "last_used_at": None, "revoked_at": None}
         revoked_ids: List[str] = []
         if self.db is not None:
             old = await self.db.api_keys.find({"user_id": user_id, "status": "ACTIVE"}).to_list(None)
@@ -493,8 +493,11 @@ class Repository:
                 if user_id in self._users:
                     self._users[user_id]["device_count"] = current_devices + 1
         raw = None
-        if not await self.get_active_api_key(user_id):
+        active_key = await self.get_active_api_key(user_id)
+        if not active_key:
             _, raw, _ = await self.rotate_api_key(user_id)
+        else:
+            raw = active_key.get("api_key")
         return deepcopy(doc), raw
 
     async def list_devices(self, user_id: str) -> List[Dict[str, Any]]:

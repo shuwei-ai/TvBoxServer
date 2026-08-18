@@ -17,8 +17,22 @@
 
     <div class="card-body">
       <div class="key-box-container">
-        <div class="code-box key-display">
-          {{ keyDisplay }}
+        <div class="code-box key-display-wrapper">
+          <span class="key-text">{{ keyDisplay }}</span>
+          <div v-if="hasKey" class="key-tools">
+            <el-tooltip :content="showFullKey ? '隐藏 API Key' : '查看完整 API Key'" placement="top">
+              <button class="tool-btn" @click="showFullKey = !showFullKey">
+                <el-icon :size="14">
+                  <component :is="showFullKey ? Hide : View" />
+                </el-icon>
+              </button>
+            </el-tooltip>
+            <el-tooltip content="复制完整 API Key" placement="top">
+              <button class="tool-btn" @click="handleCopy">
+                <el-icon :size="14"><DocumentCopy /></el-icon>
+              </button>
+            </el-tooltip>
+          </div>
         </div>
       </div>
 
@@ -28,7 +42,7 @@
           <line x1="12" y1="16" x2="12" y2="12" />
           <line x1="12" y1="8" x2="12.01" y2="8" />
         </svg>
-        <span>用于 TVBox 客户端鉴权及兼容 OpenAI 协议的第三方智能体接入。</span>
+        <span>用于 TVBox 客户端鉴权及兼容 OpenAI 协议的第三方智能体接入，支持随时查看与复制。</span>
       </div>
 
       <div class="card-actions">
@@ -54,14 +68,24 @@
 import { ref, computed } from 'vue'
 import { useDeviceStore } from '@/stores'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { RefreshRight } from '@element-plus/icons-vue'
+import { RefreshRight, DocumentCopy, View, Hide } from '@element-plus/icons-vue'
 import KeyModal from './KeyModal.vue'
 
 const deviceStore = useDeviceStore()
 const resetting = ref(false)
+const showFullKey = ref(false)
 const keyModalRef = ref<InstanceType<typeof KeyModal>>()
 
 const apiKeyInfo = computed(() => deviceStore.apiKeyInfo)
+
+const hasKey = computed(() => {
+  return Boolean(apiKeyInfo.value && (apiKeyInfo.value.api_key || apiKeyInfo.value.key_prefix))
+})
+
+const fullKeyValue = computed(() => {
+  if (!apiKeyInfo.value) return ''
+  return apiKeyInfo.value.api_key || ''
+})
 
 const keyStatusText = computed(() => {
   if (!apiKeyInfo.value) return '未生成'
@@ -74,11 +98,29 @@ const statusPillClass = computed(() => {
 })
 
 const keyDisplay = computed(() => {
-  if (!apiKeyInfo.value || !apiKeyInfo.value.key_prefix) {
+  if (!apiKeyInfo.value || (!apiKeyInfo.value.key_prefix && !apiKeyInfo.value.api_key)) {
     return '首次绑定 TVBox 设备后自动生成'
   }
-  return `${apiKeyInfo.value.key_prefix}••••••••••••••••`
+  if (showFullKey.value && apiKeyInfo.value.api_key) {
+    return apiKeyInfo.value.api_key
+  }
+  const prefix = apiKeyInfo.value.key_prefix || (apiKeyInfo.value.api_key ? apiKeyInfo.value.api_key.slice(0, 12) : 'sk-tvbox-')
+  return `${prefix}••••••••••••••••`
 })
+
+async function handleCopy() {
+  const textToCopy = fullKeyValue.value || apiKeyInfo.value?.key_prefix || ''
+  if (!textToCopy) {
+    ElMessage.warning('暂无可用的 API Key')
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(textToCopy)
+    ElMessage.success('API Key 已复制到剪贴板！')
+  } catch {
+    ElMessage.error('复制失败，请手动选中文本复制')
+  }
+}
 
 async function handleReset() {
   try {
@@ -173,10 +215,45 @@ async function handleReset() {
 .key-box-container {
   margin-bottom: 10px;
 
-  .key-display {
-    font-size: 12px;
-    padding: 9px 12px;
-    letter-spacing: 0.05em;
+  .key-display-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+
+    .key-text {
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      word-break: break-all;
+      color: var(--app-text-primary);
+    }
+
+    .key-tools {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+
+      .tool-btn {
+        width: 26px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        border-radius: 6px;
+        background: transparent;
+        border: 1px solid transparent;
+        color: var(--app-text-muted);
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        &:hover {
+          background: var(--app-surface-hover);
+          color: var(--app-text-primary);
+          border-color: var(--app-hairline);
+        }
+      }
+    }
   }
 }
 
