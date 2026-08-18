@@ -18,11 +18,11 @@
 - 🤖 **智能自然语言控制**：内置 LangChain / LLM Agent 意图识别与工具调用（Function Calling），支持影视搜索点播、遥控器键值模拟、播放进度跳转、音量控制与应用唤醒等多种场景。
 - 🔌 **兼容 OpenAI API 协议**：提供标准的 `/v1/models` 和 `/v1/chat/completions` 接口，可直接接入 NextChat、ChatBox、Dify、Home Assistant 等第三方客户端及各类自动化工作流。
 - 🛡️ **双链路安全鉴权体系**：
-  - **平台管理链路 (JWT)**：Web 控制台采用用户账号密码注册与登录，JWT Bearer 鉴权，保障控制台数据独立。
+  - **平台管理链路 (JWT + 微信扫码)**：Web 控制台采用**微信扫码免注册登录**（基于 DreamAuth 微信授权）结合**邀请码准入机制**，签发 JWT Bearer Token，告别传统繁琐的账号密码，保障多租户数据完全隔离。
   - **设备交互链路 (用户级 API Key)**：TVBox 终端与外部 OpenAI 接口仅使用用户动态 API Key，支持一键轮换、加盐哈希存储与安全脱敏，彻底隔离跨租户设备访问。
 - 👥 **完善的多租户与权限隔离**：
-  - **普通用户**：支持邀请码注册、多电视设备绑定、查看设备在线/离线状态、生成与重置 API Key、Web 端直观对话测试。
-  - **系统管理员**：统筹管理全站用户状态、设备分布与在线拓扑、邀请码批量分发与审计控制。
+  - **普通用户**：微信扫码+邀请码秒级入驻、多电视设备绑定、查看设备在线/离线状态、生成与重置 API Key、Web 端直观对话测试、分发个人名下邀请码。
+  - **系统管理员**：基于 `ADMIN_OPENIDS` 自动赋予权限，统筹管理全站用户状态、设备分布与在线拓扑、邀请码批量分发与审计控制。
 - ⚡ **实时全双工长连接**：基于 WebSocket 协议实现毫秒级指令下发与 TVBox 状态上报，支持自动重连、心跳保活与异常熔断。
 - 💻 **现代化响应式控制台**：基于 Vue 3 + TypeScript + Element Plus 构建，支持黑暗/明亮主题与自适应终端体验。
 - 🧪 **开箱即用的模拟器与测试**：内置 `mock_tvbox.py` 电视盒子虚拟客户端与完备的自动化测试集，无需实体电视即可快速联调。
@@ -101,9 +101,10 @@ ai_tv_controller/
 │   ├── src/                  # 前端源码
 │   ├── package.json          # 前端依赖配置
 │   └── vite.config.ts        # Vite 构建配置
-├── docs/                     # 详细架构与系统设计文档
+├── docs/                     # 详细架构与配置使用文档
 │   ├── system_architecture_design.md
-│   └── frontend_architecture_design.md
+│   ├── frontend_architecture_design.md
+│   └── 设备连接配置使用说明.md     # 电视端与手机遥控器安装配置图文指南
 └── README.md                 # 项目说明文档
 ```
 
@@ -133,9 +134,14 @@ ai_tv_controller/
    API_KEY_PEPPER=your-random-secret-pepper-change-it
    JWT_EXPIRE_MINUTES=1440
    
-   # 初始管理员账号（初次启动生效）
-   BOOTSTRAP_ADMIN_USERNAME=admin
-   BOOTSTRAP_ADMIN_PASSWORD=AdminPassword123!
+   # DreamAuth 微信开放授权平台配置
+   DREAMAUTH_BASE_URL=https://guangyingzhimeng.dpdns.org/kite-hub
+   DREAMAUTH_APP_CODE=YOUR_APP_CODE
+   DREAMAUTH_ACCESS_KEY=your_access_key
+   DREAMAUTH_SECRET_KEY=your_secret_key
+   
+   # 管理员微信 OpenID 列表（逗号分隔，匹配的用户自动获得 ADMIN 权限）
+   ADMIN_OPENIDS=oXXXXX_admin_openid_1,oXXXXX_admin_openid_2
    
    # 大语言模型配置 (兼容 OpenAI 规范)
    OPENAI_API_KEY=sk-your-openai-or-deepseek-key
@@ -151,7 +157,7 @@ ai_tv_controller/
    ```
 
 4. **访问服务**
-   打开浏览器访问 [http://127.0.0.1:8000](http://127.0.0.1:8000)，使用配置的管理员账号即可登录使用。
+   打开浏览器访问 [http://127.0.0.1:8000](http://127.0.0.1:8000)，使用微信扫码授权即可完成登录。
 
 ---
 
@@ -189,15 +195,23 @@ npm run build:backend
 
 ---
 
-## 📱 TVBox 设备接入与模拟器测试
+## 📱 TVBox 设备接入与客户端配置
 
-### 1. 设备接入流程
-1. 登录 Web 控制台，进入 **设备管理** 页面。
-2. 点击 **绑定新设备**，输入设备 ID（如 `tvbox_01`）和设备别名（如 `客厅电视`）。
+> 💡 **详细图文教程**：请参阅完整文档 [设备连接配置使用说明](docs/设备连接配置使用说明.md)。
+
+### 1. 客户端下载
+- **TVBox 电视端**：[TVBoxOS Releases](https://github.com/shuwei-ai/TVBoxOS/releases)
+- **TBC 手机遥控器端**：[TBC Releases](https://github.com/shuwei-ai/TBC/releases)
+- **Web 控制台**：[https://tvbox-frontend.pages.dev/](https://tvbox-frontend.pages.dev/)
+
+### 2. 简要接入流程
+1. 打开 Web 控制台，使用**微信扫码授权登录**（首次登录需输入邀请码）。
+2. 进入 **「设备管理」** 页面，点击 **「绑定新设备」**，输入设备 ID（如 `tvbox_01`）和设备别名（如 `客厅电视`）。
 3. 复制生成的 **用户级 API Key**（系统仅在首次绑定时明文展示一次）。
-4. 在 TVBox 客户端中配置服务器地址与 API Key。
+4. 在 TVBox 电视端「设置」->「AI大模型控制配置」中填入 WebSocket 地址 `wss://shuwei.iepose.cn/tvbox/ws/tvbox` 与 API Key（支持扫码快速配置）。
+5. 在手机 TBC 遥控器中填入服务器地址 `https://shuwei.iepose.cn/tvbox/` 与 API Key。
 
-### 2. 使用 TVBox 模拟器联调
+### 3. 使用 TVBox 模拟器联调 (开发者)
 无需实体 Android 设备，项目自带 `mock_tvbox.py` 模拟真实电视盒子的 WebSocket 连接与指令响应：
 
 ```bash
@@ -217,14 +231,17 @@ python3 backend/mock_tvbox.py
 ### 1. 平台管理接口（Web 控制台，`Authorization: Bearer <JWT>`）
 | 接口 | 方法 | 说明 |
 | :--- | :--- | :--- |
-| `/api/v1/auth/register` | `POST` | 用户注册（需邀请码） |
-| `/api/v1/auth/login` | `POST` | 用户登录，获取 JWT Token |
+| `/api/v1/auth/wechat/session` | `POST` | 创建微信扫码登录授权会话（获取小程序二维码） |
+| `/api/v1/auth/wechat/status` | `GET` | 轮询微信扫码与授权状态 |
+| `/api/v1/auth/wechat/complete`| `POST`| 完成微信扫码登录/自动注册（验证邀请码，返回 JWT） |
+| `/api/v1/auth/me` | `GET` | 获取当前登录用户的个人信息及角色 |
 | `/api/v1/devices` | `GET/POST` | 获取用户绑定的设备列表 / 绑定新设备 |
 | `/api/v1/devices/{device_id}` | `DELETE` | 解绑电视设备 |
 | `/api/v1/api-key` | `GET` | 查看当前用户的 API Key 状态（脱敏） |
 | `/api/v1/api-key/reset` | `POST` | 轮换/重置当前用户的 API Key |
-| `/api/v1/invite/my` | `GET` | 查询当前用户的可用邀请码 |
-| `/api/v1/admin/*` | `*` | 管理员专属运维接口（用户启停、全局设备监控） |
+| `/api/v1/invite/my-codes` | `GET` | 查询当前用户的可用邀请码及剩余额度 |
+| `/api/v1/invite/generate` | `POST` | 生成新的邀请码 |
+| `/api/v1/admin/*` | `*` | 管理员专属运维接口（用户启停、全局设备监控、全站邀请码管理） |
 
 ### 2. 设备与智能体接口（`Authorization: Bearer <用户级 API Key>`）
 | 接口 | 协议/方法 | 说明 |

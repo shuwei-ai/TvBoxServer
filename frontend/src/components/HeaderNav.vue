@@ -25,8 +25,8 @@
     </div>
 
     <div class="actions">
-      <!-- 路由导航 (管理员可见) -->
-      <nav v-if="userStore.isAdmin" class="nav-segmented">
+      <!-- 路由导航 (全用户可见 控制台 / 使用文档，管理员额外可见 管理运维) -->
+      <nav class="nav-segmented">
         <button
           class="nav-tab"
           :class="{ active: route.name === 'Dashboard' }"
@@ -36,6 +36,15 @@
           <span>控制台</span>
         </button>
         <button
+          class="nav-tab"
+          :class="{ active: route.name === 'DocGuide' }"
+          @click="$router.push('/docs')"
+        >
+          <el-icon :size="14"><Document /></el-icon>
+          <span>使用文档</span>
+        </button>
+        <button
+          v-if="userStore.isAdmin"
           class="nav-tab"
           :class="{ active: route.name === 'AdminConsole' }"
           @click="$router.push('/admin')"
@@ -87,6 +96,7 @@ import { useUserStore, useThemeStore, useDeviceStore } from '@/stores'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Monitor,
+  Document,
   Setting,
   Refresh,
   SwitchButton,

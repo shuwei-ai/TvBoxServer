@@ -25,6 +25,15 @@ export const routes: RouteRecordRaw[] = [
         }
       },
       {
+        path: 'docs',
+        name: 'DocGuide',
+        component: () => import('@/views/docs/DocGuide.vue'),
+        meta: {
+          title: '使用配置文档 - TVBox AI 控制中心',
+          requiresAuth: true
+        }
+      },
+      {
         path: 'admin',
         name: 'AdminConsole',
         component: () => import('@/views/admin/AdminConsole.vue'),
