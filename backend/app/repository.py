@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from pymongo import ASCENDING, AsyncMongoClient, ReturnDocument
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import DuplicateKeyError, OperationFailure
 
 from .config import Settings, settings
 from .security import api_key_prefix, digest_api_key, generate_api_key, hash_password, verify_password
@@ -57,21 +57,41 @@ class Repository:
         self._devices: Dict[str, Dict[str, Any]] = {}
         self._config = deepcopy(self.DEFAULT_CONFIG)
 
+    async def _safe_create_index(self, collection: Any, keys: Any, **kwargs: Any) -> None:
+        try:
+            await collection.create_index(keys, **kwargs)
+        except OperationFailure as exc:
+            if exc.code in (85, 86) or "IndexKeySpecsConflict" in str(exc) or "IndexOptionsConflict" in str(exc):
+                index_name = kwargs.get("name")
+                if not index_name:
+                    if isinstance(keys, list):
+                        index_name = "_".join(f"{k}_{v}" for k, v in keys)
+                    elif isinstance(keys, str):
+                        index_name = f"{keys}_1"
+                if index_name:
+                    try:
+                        await collection.drop_index(index_name)
+                    except OperationFailure:
+                        pass
+                await collection.create_index(keys, **kwargs)
+            else:
+                raise
+
     async def initialize(self) -> None:
         if self.db is None:
             await self._bootstrap_admin()
             return
-        await self.db.users.create_index([("openid", ASCENDING)], unique=True, sparse=True)
-        await self.db.users.create_index([("username", ASCENDING)], unique=True, sparse=True)
-        await self.db.invite_codes.create_index([("code", ASCENDING)], unique=True)
-        await self.db.invite_codes.create_index([("created_by", ASCENDING)])
-        await self.db.api_keys.create_index([("key_hash", ASCENDING)], unique=True)
-        await self.db.api_keys.create_index([("user_id", ASCENDING), ("status", ASCENDING)])
-        await self.db.api_keys.create_index(
-            [("user_id", ASCENDING)], unique=True, partialFilterExpression={"status": "ACTIVE"}, name="one_active_key_per_user"
+        await self._safe_create_index(self.db.users, [("openid", ASCENDING)], unique=True, sparse=True)
+        await self._safe_create_index(self.db.users, [("username", ASCENDING)], unique=True, sparse=True)
+        await self._safe_create_index(self.db.invite_codes, [("code", ASCENDING)], unique=True)
+        await self._safe_create_index(self.db.invite_codes, [("created_by", ASCENDING)])
+        await self._safe_create_index(self.db.api_keys, [("key_hash", ASCENDING)], unique=True)
+        await self._safe_create_index(self.db.api_keys, [("user_id", ASCENDING), ("status", ASCENDING)])
+        await self._safe_create_index(
+            self.db.api_keys, [("user_id", ASCENDING)], unique=True, partialFilterExpression={"status": "ACTIVE"}, name="one_active_key_per_user"
         )
-        await self.db.devices.create_index([("device_id", ASCENDING)], unique=True)
-        await self.db.devices.create_index([("user_id", ASCENDING)])
+        await self._safe_create_index(self.db.devices, [("device_id", ASCENDING)], unique=True)
+        await self._safe_create_index(self.db.devices, [("user_id", ASCENDING)])
         await self.db.system_configs.update_one(
             {"_id": "global_settings"}, {"$setOnInsert": deepcopy(self.DEFAULT_CONFIG)}, upsert=True
         )
