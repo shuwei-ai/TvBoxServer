@@ -88,12 +88,17 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="TVBox AI Control Center", lifespan=lifespan, root_path=ROOT_PATH)
 
+_cors_origins = list(settings.cors_origins) if settings.cors_origins else ["*"]
+_is_wildcard = "*" in _cors_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=list(settings.cors_origins),
-    allow_credentials=bool(settings.cors_origins),
+    allow_origins=_cors_origins if not _is_wildcard else ["*"],
+    allow_origin_regex=r"^https?://.*" if _is_wildcard else None,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 

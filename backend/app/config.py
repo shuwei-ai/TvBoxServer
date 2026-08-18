@@ -12,7 +12,7 @@ class Settings:
     api_key_pepper: str = os.getenv("API_KEY_PEPPER", os.getenv("JWT_SECRET", "dev-only-change-me-at-least-32-bytes"))
     bootstrap_admin_username: str = os.getenv("BOOTSTRAP_ADMIN_USERNAME", "")
     bootstrap_admin_password: str = os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "")
-    cors_origins: tuple = tuple(x.strip() for x in os.getenv("CORS_ORIGINS", "").split(",") if x.strip())
+    cors_origins: tuple = tuple(x.strip() for x in os.getenv("CORS_ORIGINS", "*").split(",") if x.strip()) or ("*",)
     root_path: str = os.getenv("ROOT_PATH", "")
     dreamauth_base_url: str = os.getenv("DREAMAUTH_BASE_URL", "https://guangyingzhimeng.dpdns.org/kite-hub").rstrip("/")
     dreamauth_app_code: str = os.getenv("DREAMAUTH_APP_CODE", "")
