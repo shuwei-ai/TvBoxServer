@@ -3,16 +3,39 @@ name: Backend Docker Build & Push
 on:
   workflow_dispatch:
     inputs:
-      dest_image:
-        description: '目标镜像地址 (Destination Image)'
+      push_to_custom:
+        description: '是否推送到私有仓库 (Push to Custom Registry)'
+        type: boolean
         required: true
+        default: true
+      dest_image:
+        description: '私有仓库目标镜像 (Custom Image)'
+        required: false
         default: 'registry.cnbita.com:5000/hero-dev/tvbox-ai-controller:latest'
       dest_user:
-        description: '目标仓库用户名 (Destination Username)'
+        description: '私有仓库用户名 (可留空读取 Secrets: CUSTOM_REGISTRY_USER)'
         required: false
         default: ''
       dest_pass:
-        description: '目标仓库密码 (Destination Password)'
+        description: '私有仓库密码 (可留空读取 Secrets: CUSTOM_REGISTRY_PASS)'
+        required: false
+        default: ''
+
+      push_to_dockerhub:
+        description: '是否推送到 Docker Hub (Push to Docker Hub)'
+        type: boolean
+        required: true
+        default: true
+      dockerhub_image:
+        description: 'Docker Hub 目标镜像 (如 username/tvbox-ai-controller:latest)'
+        required: false
+        default: 'tvbox-ai-controller:latest'
+      dockerhub_user:
+        description: 'Docker Hub 用户名 (可留空读取 Secrets: DOCKERHUB_USERNAME)'
+        required: false
+        default: ''
+      dockerhub_pass:
+        description: 'Docker Hub 密码/Token (可留空读取 Secrets: DOCKERHUB_TOKEN)'
         required: false
         default: ''
 
@@ -36,9 +59,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y skopeo
 
-      - name: Push Image with Skopeo
+      - name: Push Image to Custom Registry
+        if: ${{ github.event.inputs.push_to_custom == 'true' || github.event.inputs.push_to_custom == true }}
         run: |
-          # 格式化目标镜像地址，补全 docker:// 前缀
+          CUSTOM_USER="${{ github.event.inputs.dest_user }}"
+          CUSTOM_USER="${CUSTOM_USER:-${{ secrets.CUSTOM_REGISTRY_USER }}}"
+          CUSTOM_USER="${CUSTOM_USER:-${{ secrets.REGISTRY_USER }}}"
+
+          CUSTOM_PASS="${{ github.event.inputs.dest_pass }}"
+          CUSTOM_PASS="${CUSTOM_PASS:-${{ secrets.CUSTOM_REGISTRY_PASS }}}"
+          CUSTOM_PASS="${CUSTOM_PASS:-${{ secrets.REGISTRY_PASS }}}"
+
           DEST_IMAGE="${{ github.event.inputs.dest_image }}"
           if [[ $DEST_IMAGE != docker://* ]]; then
             DEST_IMAGE="docker://$DEST_IMAGE"
@@ -46,17 +77,57 @@ jobs:
 
           echo "Starting copy from docker-daemon:tvbox-ai-controller:latest to $DEST_IMAGE..."
 
-          # 判断是否传入了账号密码凭据
           CREDS_ARG=""
-          if [[ -n "${{ github.event.inputs.dest_user }}" && -n "${{ github.event.inputs.dest_pass }}" ]]; then
-            CREDS_ARG="--dest-creds=${{ github.event.inputs.dest_user }}:${{ github.event.inputs.dest_pass }}"
+          if [[ -n "$CUSTOM_USER" && -n "$CUSTOM_PASS" ]]; then
+            CREDS_ARG="--dest-creds=${CUSTOM_USER}:${CUSTOM_PASS}"
           fi
 
-          # 执行高效推送（禁用目标 TLS 验证以兼容自签名证书或私有 Harbor）
+          # 执行推送（禁用 TLS 验证以兼容自签名证书/私有 Registry）
           skopeo copy \
             --dest-tls-verify=false \
             $CREDS_ARG \
             docker-daemon:tvbox-ai-controller:latest \
             $DEST_IMAGE
 
-          echo "Docker image successfully pushed to $DEST_IMAGE"
+          echo "Docker image successfully pushed to Custom Registry: $DEST_IMAGE"
+
+      - name: Push Image to Docker Hub
+        if: ${{ github.event.inputs.push_to_dockerhub == 'true' || github.event.inputs.push_to_dockerhub == true }}
+        run: |
+          DH_USER="${{ github.event.inputs.dockerhub_user }}"
+          DH_USER="${DH_USER:-${{ secrets.DOCKERHUB_USERNAME }}}"
+          DH_USER="${DH_USER:-${{ secrets.DOCKER_USERNAME }}}"
+
+          DH_PASS="${{ github.event.inputs.dockerhub_pass }}"
+          DH_PASS="${DH_PASS:-${{ secrets.DOCKERHUB_TOKEN }}}"
+          DH_PASS="${DH_PASS:-${{ secrets.DOCKER_PASSWORD }}}"
+
+          DH_IMG="${{ github.event.inputs.dockerhub_image }}"
+          # 去除前缀（若有）
+          DH_IMG="${DH_IMG#docker://}"
+
+          # 若镜像未指定命名空间且提供了用户名，自动补全
+          if [[ "$DH_IMG" != *"/"* ]] && [[ -n "$DH_USER" ]]; then
+            DH_IMG="${DH_USER}/${DH_IMG}"
+          fi
+
+          # 补全 docker.io/ 前缀以确保正确推送到 Docker Hub
+          if [[ "$DH_IMG" != docker.io/* ]]; then
+            DH_IMG="docker.io/$DH_IMG"
+          fi
+
+          DH_DEST_IMAGE="docker://$DH_IMG"
+
+          echo "Starting copy from docker-daemon:tvbox-ai-controller:latest to $DH_DEST_IMAGE..."
+
+          CREDS_ARG=""
+          if [[ -n "$DH_USER" && -n "$DH_PASS" ]]; then
+            CREDS_ARG="--dest-creds=${DH_USER}:${DH_PASS}"
+          fi
+
+          skopeo copy \
+            $CREDS_ARG \
+            docker-daemon:tvbox-ai-controller:latest \
+            $DH_DEST_IMAGE
+
+          echo "Docker image successfully pushed to Docker Hub: $DH_DEST_IMAGE"
