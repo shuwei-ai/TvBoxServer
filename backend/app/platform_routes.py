@@ -245,6 +245,17 @@ async def admin_devices(_admin=Depends(admin_user), repository: Repository = Dep
     return response(result)
 
 
+@router.delete("/admin/devices/{record_id}")
+async def admin_delete_device(record_id: str, _admin=Depends(admin_user), repository: Repository = Depends(get_repository)):
+    deleted = await repository.admin_delete_device(record_id)
+    if not deleted:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "设备不存在")
+    manager = getattr(repository, "device_manager", None)
+    if manager:
+        await manager.disconnect_device(deleted["user_id"], deleted["device_id"], "Device unbound by admin")
+    return response(message="设备已强制解绑")
+
+
 @router.get("/admin/system/config")
 async def admin_config(_admin=Depends(admin_user), repository: Repository = Depends(get_repository)):
     config = public(await repository.get_config())

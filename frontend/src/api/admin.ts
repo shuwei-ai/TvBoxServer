@@ -1,4 +1,4 @@
-import { httpGet, httpPost, httpPut } from '@/utils/request'
+import { httpDelete, httpGet, httpPost, httpPut } from '@/utils/request'
 import type {
   AdminDevicesResponse,
   AdminUsersResponse,
@@ -17,6 +17,10 @@ export function updateAdminUserStatusApi(userId: string, status: number): Promis
 
 export function getAdminDevicesApi(): Promise<AdminDevicesResponse> {
   return httpGet<AdminDevicesResponse>('/api/v1/admin/devices')
+}
+
+export function deleteAdminDeviceApi(recordIdOrDeviceId: string): Promise<{ success: boolean; message: string }> {
+  return httpDelete<{ success: boolean; message: string }>(`/api/v1/admin/devices/${recordIdOrDeviceId}`)
 }
 
 export function getSystemConfigApi(): Promise<SystemConfig> {

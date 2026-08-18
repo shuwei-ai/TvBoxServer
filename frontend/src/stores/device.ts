@@ -32,8 +32,15 @@ export const useDeviceStore = defineStore('device', () => {
     return res
   }
 
-  async function unbindDevice(id: string) {
-    const res = await unbindDeviceApi(id)
+  async function unbindDevice(idOrDeviceId: string) {
+    const target = devices.value.find((d) => d.id === idOrDeviceId || d.device_id === idOrDeviceId)
+    const res = await unbindDeviceApi(idOrDeviceId)
+    if (
+      selectedDeviceId.value &&
+      (selectedDeviceId.value === idOrDeviceId || (target && target.device_id === selectedDeviceId.value))
+    ) {
+      selectedDeviceId.value = ''
+    }
     await loadDevices()
     return res
   }

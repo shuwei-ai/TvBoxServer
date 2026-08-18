@@ -30,6 +30,11 @@
             <span class="online-tag" :class="d.online ? 'online' : 'offline'">
               {{ d.online ? 'ONLINE' : 'OFFLINE' }}
             </span>
+            <el-tooltip content="强制解绑此设备" placement="top">
+              <button class="force-unbind-btn" @click.stop="handleAdminUnbind(d)">
+                <el-icon :size="12"><Delete /></el-icon>
+              </button>
+            </el-tooltip>
           </div>
           <div class="chip-bottom">
             <span class="owner">归属: <strong>{{ d.owner_username || '未知' }}</strong></span>
@@ -49,9 +54,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getAdminDevicesApi } from '@/api/admin'
+import { getAdminDevicesApi, deleteAdminDeviceApi } from '@/api/admin'
 import type { DeviceItem } from '@/types'
-import { Refresh } from '@element-plus/icons-vue'
+import { Refresh, Delete } from '@element-plus/icons-vue'
+import { ElMessageBox, ElMessage } from 'element-plus'
 
 const devices = ref<DeviceItem[]>([])
 const loading = ref(false)
@@ -65,6 +71,29 @@ async function loadDevices() {
     // handled
   } finally {
     loading.value = false
+  }
+}
+
+async function handleAdminUnbind(device: DeviceItem) {
+  try {
+    await ElMessageBox.confirm(
+      `确定要强制解绑用户「${device.owner_username || '未知'}」的设备「${device.device_name} (${device.device_id})」吗？`,
+      '强制解绑设备',
+      {
+        confirmButtonText: '确定解绑',
+        cancelButtonText: '取消',
+        confirmButtonClass: 'el-button--danger',
+        type: 'warning'
+      }
+    )
+
+    await deleteAdminDeviceApi(device.id || device.device_id)
+    ElMessage.success('设备已成功解绑')
+    await loadDevices()
+  } catch (err: any) {
+    if (err !== 'cancel') {
+      // handled
+    }
   }
 }
 

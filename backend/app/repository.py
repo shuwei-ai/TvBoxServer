@@ -517,16 +517,56 @@ class Repository:
 
     async def delete_device(self, user_id: str, record_id: str) -> Optional[Dict[str, Any]]:
         if self.db is not None:
-            deleted = await self.db.devices.find_one_and_delete({"_id": record_id, "user_id": user_id})
+            deleted = await self.db.devices.find_one_and_delete(
+                {"user_id": user_id, "$or": [{"_id": record_id}, {"device_id": record_id}]}
+            )
             if deleted:
                 await self.db.users.update_one({"_id": user_id, "device_count": {"$gt": 0}}, {"$inc": {"device_count": -1}})
+                if deleted.get("is_default"):
+                    first_remaining = await self.db.devices.find_one({"user_id": user_id}, sort=[("created_at", 1)])
+                    if first_remaining:
+                        await self.db.devices.update_one({"_id": first_remaining["_id"]}, {"$set": {"is_default": True, "updated_at": now()}})
             return deleted
-        target = next((d for d in self._devices.values() if d["_id"] == record_id and d["user_id"] == user_id), None)
-        if target:
-            self._devices.pop(target["device_id"], None)
-            if user_id in self._users:
-                self._users[user_id]["device_count"] = max(0, self._users[user_id].get("device_count", 1) - 1)
-        return deepcopy(target)
+        async with self._lock:
+            target = next((d for d in self._devices.values() if (d["_id"] == record_id or d["device_id"] == record_id) and d["user_id"] == user_id), None)
+            if target:
+                self._devices.pop(target["device_id"], None)
+                if user_id in self._users:
+                    self._users[user_id]["device_count"] = max(0, self._users[user_id].get("device_count", 1) - 1)
+                if target.get("is_default"):
+                    remaining = sorted([d for d in self._devices.values() if d["user_id"] == user_id], key=lambda x: x.get("created_at", datetime.min))
+                    if remaining:
+                        remaining[0]["is_default"] = True
+                        remaining[0]["updated_at"] = now()
+            return deepcopy(target)
+
+    async def admin_delete_device(self, record_id: str) -> Optional[Dict[str, Any]]:
+        if self.db is not None:
+            deleted = await self.db.devices.find_one_and_delete(
+                {"$or": [{"_id": record_id}, {"device_id": record_id}]}
+            )
+            if deleted:
+                owner_id = deleted.get("user_id")
+                if owner_id:
+                    await self.db.users.update_one({"_id": owner_id, "device_count": {"$gt": 0}}, {"$inc": {"device_count": -1}})
+                    if deleted.get("is_default"):
+                        first_remaining = await self.db.devices.find_one({"user_id": owner_id}, sort=[("created_at", 1)])
+                        if first_remaining:
+                            await self.db.devices.update_one({"_id": first_remaining["_id"]}, {"$set": {"is_default": True, "updated_at": now()}})
+            return deleted
+        async with self._lock:
+            target = next((d for d in self._devices.values() if d["_id"] == record_id or d["device_id"] == record_id), None)
+            if target:
+                self._devices.pop(target["device_id"], None)
+                owner_id = target.get("user_id")
+                if owner_id and owner_id in self._users:
+                    self._users[owner_id]["device_count"] = max(0, self._users[owner_id].get("device_count", 1) - 1)
+                if target.get("is_default") and owner_id:
+                    remaining = sorted([d for d in self._devices.values() if d["user_id"] == owner_id], key=lambda x: x.get("created_at", datetime.min))
+                    if remaining:
+                        remaining[0]["is_default"] = True
+                        remaining[0]["updated_at"] = now()
+            return deepcopy(target)
 
     async def update_device(self, user_id: str, record_id: str, changes: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         allowed = {k: v for k, v in changes.items() if k in {"device_name", "is_default"} and v is not None}
@@ -535,9 +575,11 @@ class Repository:
             if allowed.get("is_default"):
                 await self.db.devices.update_many({"user_id": user_id}, {"$set": {"is_default": False}})
             return await self.db.devices.find_one_and_update(
-                {"_id": record_id, "user_id": user_id}, {"$set": allowed}, return_document=ReturnDocument.AFTER
+                {"user_id": user_id, "$or": [{"_id": record_id}, {"device_id": record_id}]},
+                {"$set": allowed},
+                return_document=ReturnDocument.AFTER
             )
-        target = next((d for d in self._devices.values() if d["_id"] == record_id and d["user_id"] == user_id), None)
+        target = next((d for d in self._devices.values() if (d["_id"] == record_id or d["device_id"] == record_id) and d["user_id"] == user_id), None)
         if not target:
             return None
         if allowed.get("is_default"):
