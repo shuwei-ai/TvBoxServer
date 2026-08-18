@@ -21,7 +21,7 @@
           <span class="key-text">{{ keyDisplay }}</span>
           <div v-if="hasKey" class="key-tools">
             <el-tooltip :content="showFullKey ? '隐藏 API Key' : '查看完整 API Key'" placement="top">
-              <button class="tool-btn" @click="showFullKey = !showFullKey">
+              <button class="tool-btn" @click="handleToggleShow">
                 <el-icon :size="14">
                   <component :is="showFullKey ? Hide : View" />
                 </el-icon>
@@ -82,11 +82,6 @@ const hasKey = computed(() => {
   return Boolean(apiKeyInfo.value && (apiKeyInfo.value.api_key || apiKeyInfo.value.key_prefix))
 })
 
-const fullKeyValue = computed(() => {
-  if (!apiKeyInfo.value) return ''
-  return apiKeyInfo.value.api_key || ''
-})
-
 const keyStatusText = computed(() => {
   if (!apiKeyInfo.value) return '未生成'
   return apiKeyInfo.value.status === 'ACTIVE' ? '正常生效' : apiKeyInfo.value.status
@@ -95,6 +90,10 @@ const keyStatusText = computed(() => {
 const statusPillClass = computed(() => {
   if (!apiKeyInfo.value) return 'inactive'
   return apiKeyInfo.value.status === 'ACTIVE' ? 'active' : 'revoked'
+})
+
+const isLegacyKey = computed(() => {
+  return Boolean(apiKeyInfo.value && !apiKeyInfo.value.api_key && apiKeyInfo.value.key_prefix)
 })
 
 const keyDisplay = computed(() => {
@@ -108,17 +107,32 @@ const keyDisplay = computed(() => {
   return `${prefix}••••••••••••••••`
 })
 
-async function handleCopy() {
-  const textToCopy = fullKeyValue.value || apiKeyInfo.value?.key_prefix || ''
-  if (!textToCopy) {
-    ElMessage.warning('暂无可用的 API Key')
+function handleToggleShow() {
+  if (isLegacyKey.value) {
+    ElMessageBox.alert(
+      '当前 API Key 属于历史版本（系统此前未在云端保存明文）。请点击下方「重置 API Key」一次，生成新 Key 后即可永久支持随时显示与复制明文。',
+      '旧版 Key 提示',
+      { confirmButtonText: '我知道了', type: 'info' }
+    )
     return
   }
-  try {
-    await navigator.clipboard.writeText(textToCopy)
-    ElMessage.success('API Key 已复制到剪贴板！')
-  } catch {
-    ElMessage.error('复制失败，请手动选中文本复制')
+  showFullKey.value = !showFullKey.value
+}
+
+async function handleCopy() {
+  if (apiKeyInfo.value?.api_key) {
+    try {
+      await navigator.clipboard.writeText(apiKeyInfo.value.api_key)
+      ElMessage.success('完整 API Key 已复制到剪贴板！')
+    } catch {
+      ElMessage.error('复制失败，请手动选中文本复制')
+    }
+  } else if (isLegacyKey.value) {
+    ElMessageBox.alert(
+      '当前 API Key 为旧版本，云端无完整明文记录。请点击下方「重置 API Key」一次，生成新 Key 后即可随时一键复制完整 Key。',
+      '无法复制完整 Key',
+      { confirmButtonText: '我知道了', type: 'warning' }
+    )
   }
 }
 
@@ -137,6 +151,7 @@ async function handleReset() {
 
     resetting.value = true
     const res = await deviceStore.resetApiKey()
+    showFullKey.value = true
     ElMessage.success('API Key 重置成功！')
     if (res.api_key) {
       keyModalRef.value?.open(res.api_key)
