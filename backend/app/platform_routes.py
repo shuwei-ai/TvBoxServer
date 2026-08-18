@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -17,7 +18,9 @@ from .schemas import (
 from .security import create_access_token
 
 
+logger = logging.getLogger("TVBoxServer.Platform")
 router = APIRouter(prefix="/api/v1")
+
 
 
 def response(data: Any = None, message: str = "success") -> Dict[str, Any]:
@@ -84,6 +87,12 @@ async def complete_wechat_auth(
     if not openid:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "未获取到微信用户身份授权")
 
+    logger.info("=" * 60)
+    logger.info("📱 [微信扫码登录] 用户完成微信授权:")
+    logger.info(f"   • OpenID:     {openid}")
+    logger.info(f"   • SessionNo:  {body.session_no}")
+    logger.info("=" * 60)
+
     try:
         user = await repository.login_or_register_by_openid(
             openid=openid,
@@ -91,13 +100,22 @@ async def complete_wechat_auth(
             member_role=result_data.get("member_role")
         )
     except QuotaError as exc:
+        logger.warning(f"⚠️ [微信登录失败] OpenID={openid}, 配额错误: {exc}")
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc))
     except ConflictError as exc:
+        logger.warning(f"⚠️ [微信登录失败] OpenID={openid}, 冲突错误: {exc}")
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
     except Exception as exc:
+        logger.error(f"❌ [微信登录异常] OpenID={openid}, 异常: {exc}", exc_info=True)
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"登录失败: {exc}")
 
+    logger.info(f"✅ [微信登录成功] 用户名: {user.get('username')} | 角色: {user.get('role')} | UserID: {user.get('_id')}")
+    if user.get("role") != "ADMIN":
+        logger.info("💡 [提示] 若需要将此用户设为系统管理员，请将以下配置加入 .env 并重启服务:")
+        logger.info(f"   ADMIN_OPENIDS={openid}")
+
     return response(token_data(user, repository), "登录成功")
+
 
 
 @router.get("/auth/me")
