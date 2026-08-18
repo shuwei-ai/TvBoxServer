@@ -1,13 +1,13 @@
 <template>
   <div class="dashboard-view">
-    <div class="dashboard-grid">
-      <!-- 左侧主控区域 (设备管理 + AI 对话控制) -->
+    <div class="bento-grid">
+      <!-- 左侧主控模块 (设备管控与 AI 调度) -->
       <section class="main-column">
         <DeviceList />
         <ChatController />
       </section>
 
-      <!-- 右侧辅助卡片 (API Key + 我的邀请码) -->
+      <!-- 右侧凭证与资产模块 (API Key 与 邀请体系) -->
       <aside class="side-column">
         <ApiKeyCard />
         <InviteCodesCard />
@@ -32,9 +32,13 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.dashboard-grid {
+.dashboard-view {
+  width: 100%;
+}
+
+.bento-grid {
   display: grid;
-  grid-template-columns: 1.35fr 0.85fr;
+  grid-template-columns: 1.45fr 1fr;
   gap: 20px;
   align-items: start;
 }
@@ -46,8 +50,8 @@ onMounted(() => {
   gap: 20px;
 }
 
-@media (max-width: 900px) {
-  .dashboard-grid {
+@media (max-width: 960px) {
+  .bento-grid {
     grid-template-columns: 1fr;
   }
 }

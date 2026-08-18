@@ -1,9 +1,15 @@
 <template>
-  <div class="system-config-card glass-card">
+  <div class="system-config-card bento-card">
     <div class="card-header">
       <div class="header-left">
-        <h2>系统参数配置</h2>
-        <span class="sub-text">设置注册准入、邀请码策略及多租户配额限制</span>
+        <div class="title-with-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="header-icon">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          <h2>系统运行参数</h2>
+        </div>
+        <span class="sub-text">准入策略与多租户设备配额管控</span>
       </div>
     </div>
 
@@ -15,61 +21,68 @@
       class="config-form"
       @submit.prevent="handleSubmit"
     >
-      <div class="form-row-switches">
-        <el-form-item label="开放用户注册">
-          <el-switch
-            v-model="config.allow_user_registration"
-            active-text="允许新用户注册"
-            inactive-text="关闭公开注册"
-          />
-        </el-form-item>
+      <div class="switches-grid">
+        <div class="switch-item">
+          <div class="switch-info">
+            <span class="title">开放公开注册</span>
+            <span class="desc">允许新用户自行注册平台账号</span>
+          </div>
+          <el-switch v-model="config.allow_user_registration" />
+        </div>
 
-        <el-form-item label="强制使用邀请码">
-          <el-switch
-            v-model="config.require_invite_code"
-            active-text="注册必须填邀请码"
-            inactive-text="无需邀请码"
-          />
-        </el-form-item>
+        <div class="switch-item">
+          <div class="switch-info">
+            <span class="title">强制邀请码</span>
+            <span class="desc">注册时必须填写有效邀请码</span>
+          </div>
+          <el-switch v-model="config.require_invite_code" />
+        </div>
       </div>
 
-      <div class="form-row-inputs">
-        <el-form-item label="系统用户注册上限" prop="max_registered_users">
+      <div class="inputs-grid">
+        <div class="input-cell">
+          <label>全站注册上限</label>
           <el-input-number
             v-model="config.max_registered_users"
             :min="1"
             :max="10000"
+            size="small"
             style="width: 100%"
           />
-        </el-form-item>
+        </div>
 
-        <el-form-item label="单用户最大绑定设备数" prop="max_devices_per_user">
+        <div class="input-cell">
+          <label>单用户设备上限</label>
           <el-input-number
             v-model="config.max_devices_per_user"
             :min="1"
             :max="100"
+            size="small"
             style="width: 100%"
           />
-        </el-form-item>
+        </div>
 
-        <el-form-item label="单用户最大邀请码数" prop="max_invites_per_user">
+        <div class="input-cell">
+          <label>单用户邀请配额</label>
           <el-input-number
             v-model="config.max_invites_per_user"
             :min="0"
             :max="100"
+            size="small"
             style="width: 100%"
           />
-        </el-form-item>
+        </div>
       </div>
 
       <div class="form-actions">
         <el-button
           type="primary"
+          size="small"
           :loading="saving"
           :icon="Check"
           @click="handleSubmit"
         >
-          保存系统配置
+          保存配置
         </el-button>
       </div>
     </el-form>
@@ -130,48 +143,91 @@ defineExpose({
 
 <style scoped lang="scss">
 .system-config-card {
-  padding: 22px;
+  padding: 18px 20px;
+}
 
-  .card-header {
-    margin-bottom: 18px;
+.card-header {
+  margin-bottom: 14px;
 
-    .header-left {
-      h2 {
-        font-size: 16px;
-        font-weight: 700;
-        margin: 0 0 4px;
+  .header-left {
+    .title-with-icon {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+
+      .header-icon {
+        color: var(--app-accent);
       }
 
-      .sub-text {
-        font-size: 12px;
+      h2 {
+        font-size: 14.5px;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+    }
+
+    .sub-text {
+      font-size: 11.5px;
+      color: var(--app-text-muted);
+    }
+  }
+}
+
+.switches-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+
+  .switch-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: var(--app-radius-md);
+    background: var(--app-surface-subtle);
+    border: 1px solid var(--app-hairline);
+
+    .switch-info {
+      display: flex;
+      flex-direction: column;
+
+      .title {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--app-text-primary);
+      }
+
+      .desc {
+        font-size: 11px;
         color: var(--app-text-muted);
       }
     }
   }
+}
 
-  .form-row-switches {
+.inputs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+
+  .input-cell {
     display: flex;
-    gap: 32px;
-    margin-bottom: 12px;
-  }
+    flex-direction: column;
+    gap: 4px;
 
-  .form-row-inputs {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-  }
-
-  .form-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 10px;
+    label {
+      font-size: 11.5px;
+      color: var(--app-text-secondary);
+      font-weight: 500;
+    }
   }
 }
 
-@media (max-width: 640px) {
-  .form-row-switches {
-    flex-direction: column;
-    gap: 10px;
-  }
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

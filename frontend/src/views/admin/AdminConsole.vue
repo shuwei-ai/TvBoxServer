@@ -1,10 +1,15 @@
 <template>
   <div class="admin-view">
-    <!-- 概览指标卡片 -->
+    <!-- 概览指标卡片 (FlowAI / Linear 风格 KPI 卡片) -->
     <div class="stats-row">
-      <div class="stat-card glass-card">
+      <div class="stat-card bento-card">
         <div class="stat-icon user-icon">
-          <el-icon><User /></el-icon>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
         </div>
         <div class="stat-content">
           <div class="label">已注册用户 / 上限</div>
@@ -15,23 +20,26 @@
         </div>
       </div>
 
-      <div class="stat-card glass-card">
+      <div class="stat-card bento-card">
         <div class="stat-icon device-icon">
-          <el-icon><Monitor /></el-icon>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="7" width="20" height="15" rx="2" />
+            <polyline points="17 2 12 7 7 2" />
+          </svg>
         </div>
         <div class="stat-content">
           <div class="label">系统设备总数</div>
-          <div class="value">{{ totalDevicesCount }} 台</div>
+          <div class="value">{{ totalDevicesCount }} <span class="sub">台</span></div>
         </div>
       </div>
 
-      <div class="stat-card glass-card">
+      <div class="stat-card bento-card highlight-card">
         <div class="stat-icon online-icon">
-          <el-icon><VideoPlay /></el-icon>
+          <span class="online-dot active"></span>
         </div>
         <div class="stat-content">
-          <div class="label">当前在线设备</div>
-          <div class="value highlight">{{ onlineDevicesCount }} 台</div>
+          <div class="label">当前在线就绪设备</div>
+          <div class="value online-val">{{ onlineDevicesCount }} <span class="sub">台在线</span></div>
         </div>
       </div>
     </div>
@@ -56,7 +64,6 @@
 import { ref, onMounted, computed } from 'vue'
 import { getSystemConfigApi, getAdminDevicesApi } from '@/api/admin'
 import type { SystemConfig, DeviceItem } from '@/types'
-import { User, Monitor, VideoPlay } from '@element-plus/icons-vue'
 import UserTable from '@/components/admin/UserTable.vue'
 import DeviceMonitor from '@/components/admin/DeviceMonitor.vue'
 import SystemConfigForm from '@/components/admin/SystemConfigForm.vue'
@@ -99,35 +106,35 @@ onMounted(() => {
 
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
 
   .stat-card {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 18px 20px;
+    gap: 14px;
+    padding: 16px 18px;
 
     .stat-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
       display: grid;
       place-items: center;
-      font-size: 22px;
+      font-size: 18px;
 
       &.user-icon {
-        background: rgba(96, 165, 250, 0.15);
+        background: var(--app-blue-subtle);
         color: var(--app-blue);
       }
 
       &.device-icon {
-        background: rgba(148, 163, 184, 0.15);
-        color: var(--app-text-muted);
+        background: var(--app-accent-subtle);
+        color: var(--app-accent);
       }
 
       &.online-icon {
-        background: rgba(52, 211, 153, 0.15);
+        background: var(--app-success-subtle);
         color: var(--app-success);
       }
     }
@@ -137,22 +144,25 @@ onMounted(() => {
       flex-direction: column;
 
       .label {
-        font-size: 12px;
+        font-size: 11.5px;
         color: var(--app-text-muted);
         margin-bottom: 2px;
+        font-weight: 500;
       }
 
       .value {
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 700;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        color: var(--app-text-primary);
 
         .sub {
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 400;
           color: var(--app-text-muted);
         }
 
-        &.highlight {
+        &.online-val {
           color: var(--app-success);
         }
       }
@@ -162,7 +172,7 @@ onMounted(() => {
 
 .admin-grid {
   display: grid;
-  grid-template-columns: 1.35fr 0.85fr;
+  grid-template-columns: 1.4fr 1fr;
   gap: 20px;
   align-items: start;
 
@@ -174,7 +184,7 @@ onMounted(() => {
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .admin-grid {
     grid-template-columns: 1fr;
   }

@@ -1,65 +1,87 @@
 <template>
-  <div class="device-list-card glass-card">
+  <div class="device-list-card bento-card">
     <div class="card-header">
       <div class="header-title">
-        <h2>我的设备</h2>
-        <span class="count-badge">{{ deviceStore.onlineDevices.length }} 在线 / {{ deviceStore.deviceCount }} 总数</span>
+        <div class="title-with-icon">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="header-icon">
+            <rect x="2" y="7" width="20" height="15" rx="2" />
+            <polyline points="17 2 12 7 7 2" />
+          </svg>
+          <h2>我的设备</h2>
+        </div>
+        <div class="telemetry-tags">
+          <span class="count-tag">
+            <span class="online-dot active"></span>
+            {{ deviceStore.onlineDevices.length }} 在线
+          </span>
+          <span class="count-tag total">
+            {{ deviceStore.deviceCount }} 台绑定
+          </span>
+        </div>
       </div>
-      <el-button type="primary" :icon="Plus" round @click="bindDialogRef?.open()">
+      <el-button type="primary" size="small" :icon="Plus" @click="bindDialogRef?.open()">
         绑定设备
       </el-button>
     </div>
 
     <!-- 加载中骨架屏 -->
-    <el-skeleton :loading="deviceStore.loading" animated :rows="3">
+    <el-skeleton :loading="deviceStore.loading" animated :rows="2">
       <template #default>
-        <!-- 设备列表 -->
+        <!-- 设备卡片网格 -->
         <div v-if="deviceStore.devices.length > 0" class="devices-grid">
           <div
             v-for="device in deviceStore.devices"
-            :key="device.id"
+            :key="device.id || device.device_id"
             class="device-item"
-            :class="{ 'is-selected': deviceStore.selectedDeviceId === device.device_id }"
+            :class="{
+              'is-selected': deviceStore.selectedDeviceId === device.device_id,
+              'is-online': device.online
+            }"
             @click="handleSelectDevice(device.device_id)"
           >
             <div class="device-main">
               <div class="device-title-row">
-                <span class="online-dot" :class="{ active: device.online }"></span>
+                <span class="online-dot" :class="device.online ? 'active' : 'offline'"></span>
                 <span class="device-name">{{ device.device_name }}</span>
-                <el-tag v-if="device.is_default" size="small" type="success" effect="plain" round>
-                  默认
-                </el-tag>
+                <span v-if="device.is_default" class="badge-default">默认</span>
+                <span v-if="deviceStore.selectedDeviceId === device.device_id" class="badge-active">🎯 当前目标</span>
               </div>
 
-              <div class="device-id-row">
-                <code>{{ device.device_id }}</code>
-                <span class="status-text">{{ device.online ? '在线' : '离线' }}</span>
+              <div class="device-meta-row">
+                <span class="device-id">
+                  <code>{{ device.device_id }}</code>
+                </span>
+                <span class="status-indicator" :class="{ online: device.online }">
+                  {{ device.online ? '在线就绪' : '离线中' }}
+                </span>
               </div>
             </div>
 
-            <div class="device-ops" @click.stop>
-              <el-button
-                type="danger"
-                size="small"
-                plain
-                circle
-                :icon="Delete"
-                @click="handleUnbind(device)"
-              />
+            <div class="device-actions" @click.stop>
+              <el-tooltip content="解绑此设备" placement="top">
+                <button class="unbind-btn" @click="handleUnbind(device)">
+                  <el-icon :size="13"><Delete /></el-icon>
+                </button>
+              </el-tooltip>
             </div>
           </div>
         </div>
 
         <!-- 空状态 -->
-        <el-empty
-          v-else
-          description="尚未绑定任何 TVBox 设备"
-          :image-size="80"
-        >
-          <el-button type="primary" :icon="Plus" @click="bindDialogRef?.open()">
+        <div v-else class="empty-state">
+          <div class="empty-icon-box">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="7" width="20" height="15" rx="2" />
+              <line x1="8" y1="21" x2="16" y2="21" />
+              <line x1="12" y1="17" x2="12" y2="21" />
+            </svg>
+          </div>
+          <p class="empty-text">尚未绑定任何 TVBox 设备</p>
+          <p class="empty-sub">绑定后可在电视端输入对应 API Key 进行自动连接与遥控</p>
+          <el-button type="primary" size="small" :icon="Plus" @click="bindDialogRef?.open()">
             立即绑定首台设备
           </el-button>
-        </el-empty>
+        </div>
       </template>
     </el-skeleton>
 
@@ -86,7 +108,7 @@ const keyModalRef = ref<InstanceType<typeof KeyModal>>()
 
 function handleSelectDevice(deviceId: string) {
   if (deviceStore.selectedDeviceId === deviceId) {
-    deviceStore.setSelectedDeviceId('') // toggle to auto-route
+    deviceStore.setSelectedDeviceId('') // toggle back to auto-route
   } else {
     deviceStore.setSelectedDeviceId(deviceId)
   }
@@ -115,7 +137,7 @@ async function handleUnbind(device: DeviceItem) {
     ElMessage.success('设备已成功解绑')
   } catch (err: any) {
     if (err !== 'cancel') {
-      // 错误由 axios 拦截器提示
+      // handled
     }
   }
 }
@@ -123,65 +145,96 @@ async function handleUnbind(device: DeviceItem) {
 
 <style scoped lang="scss">
 .device-list-card {
-  padding: 22px;
+  padding: 18px 20px;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 
   .header-title {
     display: flex;
-    align-items: baseline;
-    gap: 10px;
+    align-items: center;
+    gap: 12px;
 
-    h2 {
-      font-size: 17px;
-      font-weight: 700;
-      margin: 0;
+    .title-with-icon {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+
+      .header-icon {
+        color: var(--app-accent);
+      }
+
+      h2 {
+        font-size: 14.5px;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
     }
 
-    .count-badge {
-      font-size: 12px;
-      color: var(--app-text-muted);
+    .telemetry-tags {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .count-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        padding: 2px 7px;
+        border-radius: 6px;
+        background: var(--app-success-subtle);
+        color: var(--app-success);
+        font-weight: 600;
+
+        &.total {
+          background: var(--app-surface-subtle);
+          color: var(--app-text-muted);
+          border: 1px solid var(--app-hairline);
+        }
+      }
     }
   }
 }
 
 .devices-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
 }
 
 .device-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: rgba(148, 163, 184, 0.05);
-  border: 1px solid var(--app-card-border);
+  padding: 11px 14px;
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface);
+  border: 1px solid var(--app-hairline);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 
   &:hover {
-    border-color: var(--app-accent);
-    background: rgba(94, 234, 212, 0.05);
+    border-color: var(--app-hairline-strong);
+    background: var(--app-surface-hover);
   }
 
   &.is-selected {
     border-color: var(--app-accent);
+    background: var(--app-accent-subtle);
     box-shadow: 0 0 0 1px var(--app-accent);
-    background: rgba(94, 234, 212, 0.08);
   }
 
   .device-main {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
+    min-width: 0;
 
     .device-title-row {
       display: flex;
@@ -190,22 +243,110 @@ async function handleUnbind(device: DeviceItem) {
 
       .device-name {
         font-weight: 600;
-        font-size: 14px;
+        font-size: 13px;
+        color: var(--app-text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .badge-default {
+        font-size: 10px;
+        padding: 0 5px;
+        border-radius: 4px;
+        background: var(--app-success-subtle);
+        color: var(--app-success);
+        font-weight: 600;
+      }
+
+      .badge-active {
+        font-size: 10px;
+        padding: 0 5px;
+        border-radius: 4px;
+        background: var(--app-accent-subtle);
+        color: var(--app-accent);
+        font-weight: 600;
       }
     }
 
-    .device-id-row {
+    .device-meta-row {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 12px;
+      font-size: 11.5px;
       color: var(--app-text-muted);
 
-      code {
-        font-family: ui-monospace, monospace;
+      .device-id code {
+        font-family: 'JetBrains Mono', monospace;
         font-size: 11px;
+        color: var(--app-text-secondary);
+      }
+
+      .status-indicator {
+        font-size: 11px;
+        &.online {
+          color: var(--app-success);
+          font-weight: 500;
+        }
       }
     }
+  }
+
+  .device-actions {
+    display: flex;
+    align-items: center;
+
+    .unbind-btn {
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 6px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--app-text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background: var(--app-danger-subtle);
+        color: var(--app-danger);
+        border-color: rgba(239, 68, 68, 0.2);
+      }
+    }
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 30px 16px;
+
+  .empty-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--app-surface-subtle);
+    border: 1px solid var(--app-hairline);
+    display: grid;
+    place-items: center;
+    color: var(--app-text-muted);
+    margin-bottom: 10px;
+  }
+
+  .empty-text {
+    font-size: 13.5px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--app-text-primary);
+  }
+
+  .empty-sub {
+    font-size: 12px;
+    color: var(--app-text-muted);
+    margin-bottom: 14px;
   }
 }
 </style>

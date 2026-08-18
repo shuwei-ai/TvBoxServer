@@ -1,74 +1,81 @@
 <template>
-  <header class="header-nav glass-card">
+  <header class="header-nav bento-card">
     <div class="brand" @click="$router.push('/')">
-      <div class="logo-box">TV</div>
+      <div class="logo-box">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="7" width="20" height="15" rx="3" />
+          <polyline points="17 2 12 7 7 2" />
+        </svg>
+      </div>
       <div class="title-group">
-        <h1 class="main-title">TVBox AI 控制中心</h1>
-        <div class="sub-title">多租户智能遥控与管理平台</div>
+        <div class="main-title-row">
+          <h1 class="main-title">TvBoxServer</h1>
+          <span class="version-tag">AI v1.0</span>
+        </div>
+        <div class="sub-title">智能电视调度与控制中心</div>
+      </div>
+    </div>
+
+    <!-- 中间实时状态指示器 (Live Telemetry) -->
+    <div class="live-telemetry">
+      <div class="live-pill" :class="{ live: deviceStore.onlineDevices.length > 0 }">
+        <span class="online-dot" :class="{ active: deviceStore.onlineDevices.length > 0 }"></span>
+        <span>{{ deviceStore.onlineDevices.length }} 台电视在线</span>
       </div>
     </div>
 
     <div class="actions">
-      <!-- 路由切换 (如果是管理员) -->
-      <div v-if="userStore.isAdmin" class="nav-links">
-        <el-button
-          :type="route.name === 'Dashboard' ? 'primary' : 'default'"
-          size="small"
-          round
+      <!-- 路由导航 (管理员可见) -->
+      <nav v-if="userStore.isAdmin" class="nav-segmented">
+        <button
+          class="nav-tab"
+          :class="{ active: route.name === 'Dashboard' }"
           @click="$router.push('/')"
         >
-          <el-icon><Monitor /></el-icon>
-          <span>设备与对话</span>
-        </el-button>
-        <el-button
-          :type="route.name === 'AdminConsole' ? 'primary' : 'default'"
-          size="small"
-          round
+          <el-icon :size="14"><Monitor /></el-icon>
+          <span>控制台</span>
+        </button>
+        <button
+          class="nav-tab"
+          :class="{ active: route.name === 'AdminConsole' }"
           @click="$router.push('/admin')"
         >
-          <el-icon><Setting /></el-icon>
-          <span>管理员后台</span>
-        </el-button>
-      </div>
+          <el-icon :size="14"><Setting /></el-icon>
+          <span>管理运维</span>
+        </button>
+      </nav>
 
-      <!-- 用户信息徽标 -->
-      <div class="user-info">
-        <el-avatar :size="32" class="user-avatar">
+      <!-- 用户信息胶囊 -->
+      <div class="user-capsule">
+        <el-avatar :size="26" class="user-avatar">
           {{ userStore.username.charAt(0).toUpperCase() || 'U' }}
         </el-avatar>
-        <div class="user-meta">
-          <span class="username">{{ userStore.username }}</span>
-          <el-tag
-            :type="userStore.isAdmin ? 'danger' : 'info'"
-            size="small"
-            effect="dark"
-            round
-          >
-            {{ userStore.role }}
-          </el-tag>
-        </div>
+        <span class="username">{{ userStore.username }}</span>
+        <span class="role-pill" :class="{ admin: userStore.isAdmin }">
+          {{ userStore.isAdmin ? 'Admin' : 'User' }}
+        </span>
       </div>
 
-      <!-- 主题切换 -->
-      <el-tooltip :content="themeStore.isDark ? '切换浅色模式' : '切换深色模式'" placement="bottom">
-        <el-button circle size="default" @click="themeStore.toggleTheme">
-          <el-icon><Moon v-if="themeStore.isDark" /><Sunny v-else /></el-icon>
-        </el-button>
-      </el-tooltip>
+      <!-- 工具栏按钮组 -->
+      <div class="tool-buttons">
+        <el-tooltip :content="themeStore.isDark ? '切换浅色模式' : '切换深色模式'" placement="bottom">
+          <button class="icon-btn" @click="themeStore.toggleTheme">
+            <el-icon :size="15"><Moon v-if="themeStore.isDark" /><Sunny v-else /></el-icon>
+          </button>
+        </el-tooltip>
 
-      <!-- 刷新数据 -->
-      <el-tooltip content="刷新数据" placement="bottom">
-        <el-button circle size="default" :loading="refreshing" @click="handleRefresh">
-          <el-icon><Refresh /></el-icon>
-        </el-button>
-      </el-tooltip>
+        <el-tooltip content="刷新设备与数据" placement="bottom">
+          <button class="icon-btn" :class="{ spinning: refreshing }" @click="handleRefresh">
+            <el-icon :size="15"><Refresh /></el-icon>
+          </button>
+        </el-tooltip>
 
-      <!-- 退出登录 -->
-      <el-tooltip content="退出登录" placement="bottom">
-        <el-button circle type="danger" plain size="default" @click="handleLogout">
-          <el-icon><SwitchButton /></el-icon>
-        </el-button>
-      </el-tooltip>
+        <el-tooltip content="退出登录" placement="bottom">
+          <button class="icon-btn danger" @click="handleLogout">
+            <el-icon :size="15"><SwitchButton /></el-icon>
+          </button>
+        </el-tooltip>
+      </div>
     </div>
   </header>
 </template>
@@ -103,7 +110,7 @@ async function handleRefresh() {
   try {
     await deviceStore.loadDevices()
     emit('refresh')
-    ElMessage.success('数据已刷新')
+    ElMessage.success('已拉取最新设备状态')
   } catch (err: any) {
     ElMessage.error(err.message || '刷新失败')
   } finally {
@@ -129,97 +136,210 @@ function handleLogout() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 24px;
+  padding: 10px 20px;
   margin-bottom: 20px;
-  border-radius: 16px;
+  border-radius: var(--app-radius-lg);
+  background: var(--app-header-bg);
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   cursor: pointer;
   user-select: none;
 }
 
 .logo-box {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--app-accent), var(--app-blue));
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--app-accent);
   display: grid;
   place-items: center;
-  color: #04202b;
-  font-weight: 900;
-  font-size: 18px;
-  box-shadow: 0 4px 14px var(--app-accent-glow);
+  color: #ffffff;
+  box-shadow: 0 2px 8px var(--app-accent-glow);
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: scale(1.04);
+  }
 }
 
 .title-group {
   display: flex;
   flex-direction: column;
 
-  .main-title {
-    font-size: 18px;
-    font-weight: 700;
-    margin: 0;
-    line-height: 1.3;
+  .main-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .main-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin: 0;
+      color: var(--app-text-primary);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    .version-tag {
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--app-accent-subtle);
+      color: var(--app-accent);
+      font-weight: 600;
+    }
   }
 
   .sub-title {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--app-text-muted);
   }
+}
+
+.live-telemetry {
+  display: flex;
+  align-items: center;
 }
 
 .actions {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
-.nav-links {
+/* 分段导航 */
+.nav-segmented {
   display: flex;
-  gap: 8px;
-}
+  background: var(--app-surface-subtle);
+  border: 1px solid var(--app-hairline);
+  padding: 3px;
+  border-radius: 8px;
+  gap: 2px;
 
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 12px 4px 6px;
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.1);
-
-  .user-avatar {
-    background: linear-gradient(135deg, var(--app-blue), #8b5cf6);
-    color: #fff;
-    font-weight: 700;
-    font-size: 14px;
-  }
-
-  .user-meta {
+  .nav-tab {
     display: flex;
     align-items: center;
     gap: 6px;
+    padding: 4px 12px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--app-text-secondary);
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
 
-    .username {
-      font-size: 13px;
+    &:hover {
+      color: var(--app-text-primary);
+    }
+
+    &.active {
+      background: var(--app-surface);
+      color: var(--app-accent);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
       font-weight: 600;
     }
   }
 }
 
-@media (max-width: 768px) {
+/* 用户信息胶囊 */
+.user-capsule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px 3px 4px;
+  border-radius: 999px;
+  background: var(--app-surface-subtle);
+  border: 1px solid var(--app-hairline);
+
+  .user-avatar {
+    background: var(--app-accent);
+    color: #fff;
+    font-weight: 600;
+    font-size: 12px;
+  }
+
+  .username {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--app-text-primary);
+  }
+
+  .role-pill {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--app-hairline);
+    color: var(--app-text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+
+    &.admin {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--app-danger);
+    }
+  }
+}
+
+/* 紧凑工具按钮 */
+.tool-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  .icon-btn {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border-radius: 7px;
+    background: var(--app-surface-subtle);
+    border: 1px solid var(--app-hairline);
+    color: var(--app-text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: var(--app-surface-hover);
+      color: var(--app-text-primary);
+      border-color: var(--app-hairline-strong);
+    }
+
+    &.danger:hover {
+      background: var(--app-danger-subtle);
+      color: var(--app-danger);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    &.spinning .el-icon {
+      animation: spin 1s linear infinite;
+    }
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 860px) {
   .header-nav {
     flex-direction: column;
-    gap: 14px;
-    padding: 16px;
+    gap: 12px;
+    padding: 14px;
+    align-items: flex-start;
   }
 
   .actions {
+    width: 100%;
+    justify-content: space-between;
     flex-wrap: wrap;
-    justify-content: center;
   }
 }
 </style>

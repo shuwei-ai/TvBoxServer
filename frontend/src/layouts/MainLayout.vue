@@ -4,7 +4,7 @@
       <HeaderNav />
       <main class="layout-main">
         <router-view v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
+          <transition name="page-fade" mode="out-in">
             <component :is="Component" />
           </transition>
         </router-view>
@@ -20,33 +20,38 @@ import HeaderNav from '@/components/HeaderNav.vue'
 <style scoped lang="scss">
 .app-layout {
   min-height: 100vh;
-  padding: 20px;
-}
-
-.layout-container {
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 24px;
   display: flex;
   flex-direction: column;
 }
 
+.layout-container {
+  max-width: 1240px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
 .layout-main {
   width: 100%;
+  flex: 1;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
-.fade-enter-from {
+.page-fade-enter-from {
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(4px);
 }
 
-.fade-leave-to {
+.page-fade-leave-to {
   opacity: 0;
-  transform: translateY(-6px);
+  transform: translateY(-4px);
 }
 
 @media (max-width: 768px) {

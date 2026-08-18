@@ -1,113 +1,20 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>TVBox AI 控制中心</title>
-  <style>
-    :root{color-scheme:dark;--bg:#07111f;--panel:#101d2d;--line:#25364b;--muted:#94a3b8;--text:#edf4ff;--accent:#5eead4;--danger:#fb7185;--blue:#60a5fa}
-    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0,#123150 0,transparent 35%),var(--bg);font-family:Inter,ui-sans-serif,system-ui;color:var(--text)}
-    button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}.shell{max-width:1180px;margin:auto;padding:24px}.brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--accent),var(--blue));display:grid;place-items:center;color:#04202b;font-weight:900}.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.muted{color:var(--muted)}
-    .btn{border:1px solid var(--line);background:#16263a;color:var(--text);border-radius:10px;padding:9px 14px}.btn:hover{border-color:#4d6787}.primary{background:var(--accent);color:#062621;border-color:transparent;font-weight:700}.danger{color:#fecdd3;border-color:#7f1d35}.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}.card{background:rgba(16,29,45,.92);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 15px 50px #0004}.card h2{margin:0 0 16px;font-size:17px}.row{display:flex;gap:10px;align-items:center}.between{justify-content:space-between}.stack{display:grid;gap:12px}.field{display:grid;gap:6px}.field label{color:var(--muted);font-size:13px}.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);background:#091523;color:var(--text);border-radius:10px;padding:11px}.field textarea{min-height:90px;resize:vertical}.device{display:grid;grid-template-columns:1fr auto;gap:12px;border:1px solid var(--line);border-radius:13px;padding:14px}.dot{display:inline-block;width:8px;height:8px;border-radius:99px;background:#64748b;margin-right:7px}.dot.on{background:#34d399;box-shadow:0 0 10px #34d399}.pill{font-size:12px;border:1px solid var(--line);padding:4px 8px;border-radius:999px}.key{font-family:ui-monospace,monospace;background:#08121f;border:1px dashed #3b526d;padding:12px;border-radius:10px;overflow-wrap:anywhere}.messages{height:330px;overflow:auto;display:grid;align-content:start;gap:10px;padding:4px}.msg{max-width:85%;padding:10px 13px;border-radius:13px;background:#1a2a40;white-space:pre-wrap}.msg.me{justify-self:end;background:#124f4c}.msg.error{background:#511d2b}.dialog{position:fixed;inset:0;background:#020817dd;display:grid;place-items:center;padding:20px;z-index:10}.dialog .card{width:min(430px,100%)}.tabs{display:flex;gap:6px;margin-bottom:16px}.tabs button{flex:1}.active{border-color:var(--accent);color:var(--accent)}.section{margin-top:18px}.empty{border:1px dashed var(--line);padding:22px;border-radius:12px;text-align:center;color:var(--muted)}.toast{position:fixed;right:20px;bottom:20px;background:#13263b;border:1px solid var(--line);padding:12px 16px;border-radius:10px;z-index:20}.admin-table{width:100%;border-collapse:collapse;font-size:13px}.admin-table td,.admin-table th{padding:9px;border-bottom:1px solid var(--line);text-align:left}@media(max-width:800px){.grid{grid-template-columns:1fr}.shell{padding:14px}.topbar{align-items:flex-start}.row.wrap{flex-wrap:wrap}}
-  </style>
-</head>
-<body>
-  <div id="authDialog" class="dialog">
-    <div class="card">
-      <div class="brand"><div class="logo">TV</div><div><h2 style="margin:0">TVBox AI</h2><div class="muted">多租户控制中心</div></div></div>
-      <div class="tabs section"><button id="loginTab" class="btn active">登录</button><button id="registerTab" class="btn">注册</button></div>
-      <form id="authForm" class="stack">
-        <div class="field"><label>用户名</label><input id="username" required minlength="3" autocomplete="username"></div>
-        <div class="field"><label>密码</label><input id="password" required minlength="8" type="password" autocomplete="current-password"></div>
-        <div id="inviteField" class="field hidden"><label>邀请码</label><input id="inviteCode" placeholder="INV-XXXXXXXX"></div>
-        <button class="btn primary" type="submit">继续</button><div id="authError" class="muted"></div>
-      </form>
-    </div>
-  </div>
-
-  <main class="shell">
-    <header class="topbar">
-      <div class="brand"><div class="logo">TV</div><div><strong>TVBox AI 控制中心</strong><div id="identity" class="muted">未登录</div></div></div>
-      <div class="row"><button id="refreshBtn" class="btn">刷新</button><button id="logoutBtn" class="btn danger">退出</button></div>
-    </header>
-
-    <div class="grid">
-      <section class="stack">
-        <div class="card">
-          <div class="row between"><h2>我的设备</h2><button id="showBindBtn" class="btn primary">+ 绑定设备</button></div>
-          <form id="bindForm" class="row wrap hidden">
-            <div class="field" style="flex:1"><label>设备 ID</label><input id="deviceId" required placeholder="tvbox_xxx"></div>
-            <div class="field" style="flex:1"><label>设备名称</label><input id="deviceName" required placeholder="客厅电视"></div>
-            <button class="btn primary" type="submit" style="align-self:end">绑定</button>
-          </form>
-          <div id="deviceList" class="stack section"></div>
-        </div>
-
-        <div class="card">
-          <h2>AI 对话控制</h2>
-          <div class="field"><label>目标设备</label><select id="chatDevice"><option value="">自动路由</option></select></div>
-          <div id="messages" class="messages section"><div class="msg">选择设备并输入控制指令，例如“播放狂飙第 3 集”。</div></div>
-          <form id="chatForm" class="row section"><input id="chatInput" style="flex:1" placeholder="输入电视控制指令…" required><button class="btn primary">发送</button></form>
-        </div>
-      </section>
-
-      <aside class="stack">
-        <div class="card">
-          <div class="row between"><h2>用户级 API Key</h2><span id="keyStatus" class="pill">未创建</span></div>
-          <div id="keyPrefix" class="key muted">首次绑定设备后生成</div>
-          <p class="muted">同一个 Key 可供你名下多台 TVBox 使用。完整 Key 仅在创建或重置时显示一次。</p>
-          <button id="resetKeyBtn" class="btn danger">重置 API Key</button>
-        </div>
-
-        <div class="card">
-          <div class="row between"><h2>我的邀请码</h2><button id="generateInviteBtn" class="btn">生成</button></div>
-          <div id="inviteList" class="stack"></div>
-        </div>
-
-        <div id="adminCard" class="card hidden">
-          <h2>管理员控制台</h2>
-          <div id="adminStats" class="muted"></div>
-          <div style="overflow:auto"><table class="admin-table"><thead><tr><th>用户</th><th>角色</th><th>设备</th><th>状态</th><th></th></tr></thead><tbody id="adminUsers"></tbody></table></div>
-          <div id="adminDevices" class="muted section"></div>
-          <form id="adminConfigForm" class="stack section">
-            <div class="row"><label><input id="allowRegistration" type="checkbox"> 开放注册</label><label><input id="requireInvite" type="checkbox"> 强制邀请码</label></div>
-            <div class="row"><div class="field"><label>用户上限</label><input id="maxUsers" type="number" min="1"></div><div class="field"><label>设备/用户</label><input id="maxDevices" type="number" min="1"></div><div class="field"><label>邀请/用户</label><input id="maxInvites" type="number" min="0"></div></div>
-            <button class="btn" type="submit">保存系统配置</button>
-          </form>
-          <div class="row section"><input id="adminInviteCount" type="number" min="1" max="20" value="1" style="width:70px"><button id="adminInviteBtn" class="btn">生成系统邀请码</button></div>
-        </div>
-      </aside>
-    </div>
-  </main>
-
-  <div id="keyDialog" class="dialog hidden"><div class="card"><h2>请立即保存 API Key</h2><div id="newKey" class="key"></div><p class="muted">关闭后平台不会再次显示完整内容。</p><div class="row"><button id="copyKeyBtn" class="btn primary">复制</button><button id="closeKeyBtn" class="btn">我已保存</button></div></div></div>
-  <div id="toast" class="toast hidden"></div>
-
-  <script>
-    const state={token:localStorage.getItem('tvbox_jwt')||'',user:JSON.parse(localStorage.getItem('tvbox_user')||'null'),devices:[],mode:'login'};
-    const $=id=>document.getElementById(id);
-    function toast(message){$('toast').textContent=message;$('toast').classList.remove('hidden');setTimeout(()=>$('toast').classList.add('hidden'),2600)}
-    async function api(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(state.token)headers.Authorization=`Bearer ${state.token}`;const res=await fetch(path,{...options,headers});let body={};try{body=await res.json()}catch{}if(!res.ok)throw new Error(body.detail||body.message||`HTTP ${res.status}`);return body.data}
-    function setAuthMode(mode){state.mode=mode;$('loginTab').classList.toggle('active',mode==='login');$('registerTab').classList.toggle('active',mode==='register');$('inviteField').classList.toggle('hidden',mode!=='register');$('password').autocomplete=mode==='login'?'current-password':'new-password'}
-    $('loginTab').onclick=()=>setAuthMode('login');$('registerTab').onclick=()=>setAuthMode('register');
-    $('authForm').onsubmit=async e=>{e.preventDefault();$('authError').textContent='';try{const payload={username:$('username').value,password:$('password').value};if(state.mode==='register'&&$('inviteCode').value)payload.invite_code=$('inviteCode').value;const data=await api(`/api/v1/auth/${state.mode}`,{method:'POST',body:JSON.stringify(payload)});state.token=data.access_token;state.user=data.user;localStorage.setItem('tvbox_jwt',state.token);localStorage.setItem('tvbox_user',JSON.stringify(state.user));$('authDialog').classList.add('hidden');await loadAll()}catch(err){$('authError').textContent=err.message}};
-    $('logoutBtn').onclick=()=>{localStorage.removeItem('tvbox_jwt');localStorage.removeItem('tvbox_user');location.reload()};
-    $('refreshBtn').onclick=()=>loadAll();$('showBindBtn').onclick=()=>$('bindForm').classList.toggle('hidden');
-    $('bindForm').onsubmit=async e=>{e.preventDefault();try{const data=await api('/api/v1/devices/bind',{method:'POST',body:JSON.stringify({device_id:$('deviceId').value,device_name:$('deviceName').value})});if(data.api_key)showKey(data.api_key);$('bindForm').reset();$('bindForm').classList.add('hidden');await loadDevices();toast('设备绑定成功')}catch(err){toast(err.message)}};
-    async function loadDevices(){const data=await api('/api/v1/devices');state.devices=data.devices||[];$('deviceList').innerHTML=state.devices.length?'':'<div class="empty">尚未绑定设备</div>';$('chatDevice').innerHTML='<option value="">自动路由</option>';for(const d of state.devices){const node=document.createElement('div');node.className='device';node.innerHTML=`<div><strong>${escapeHtml(d.device_name)}</strong><div class="muted"><span class="dot ${d.online?'on':''}"></span>${escapeHtml(d.device_id)} · ${d.online?'在线':'离线'} ${d.is_default?'<span class="pill">默认</span>':''}</div></div><button class="btn danger">解绑</button>`;node.querySelector('button').onclick=()=>removeDevice(d.id);$('deviceList').appendChild(node);const o=document.createElement('option');o.value=d.device_id;o.textContent=d.device_name;$('chatDevice').appendChild(o)}const key=data.api_key;if(key){$('keyStatus').textContent=key.status;$('keyPrefix').textContent=key.key_prefix+'••••••••'}else{$('keyStatus').textContent='未创建';$('keyPrefix').textContent='首次绑定设备后生成'}}
-    async function removeDevice(id){if(!confirm('确定解绑该设备？'))return;try{await api(`/api/v1/devices/${id}`,{method:'DELETE'});await loadDevices()}catch(err){toast(err.message)}}
-    function showKey(key){$('newKey').textContent=key;$('keyDialog').classList.remove('hidden')}$('closeKeyBtn').onclick=()=>$('keyDialog').classList.add('hidden');$('copyKeyBtn').onclick=async()=>{await navigator.clipboard.writeText($('newKey').textContent);toast('已复制')};
-    $('resetKeyBtn').onclick=async()=>{if(!confirm('重置后所有电视都必须更新新 Key，是否继续？'))return;try{const data=await api('/api/v1/api-key/reset',{method:'POST'});showKey(data.api_key);await loadDevices()}catch(err){toast(err.message)}};
-    async function loadInvites(){try{const data=await api('/api/v1/invite/my-codes');$('inviteList').innerHTML=(data.codes||[]).map(x=>`<div class="row between"><code>${escapeHtml(x.code)}</code><span class="pill">${x.status}</span></div>`).join('')||'<div class="muted">暂无邀请码</div>'}catch(err){$('inviteList').innerHTML=`<div class="muted">${escapeHtml(err.message)}</div>`}}$('generateInviteBtn').onclick=async()=>{try{await api('/api/v1/invite/generate',{method:'POST'});await loadInvites()}catch(err){toast(err.message)}};
-    $('chatForm').onsubmit=async e=>{e.preventDefault();const text=$('chatInput').value.trim();if(!text)return;addMessage(text,'me');$('chatInput').value='';try{const body={model:$('chatDevice').value||'auto',device_id:$('chatDevice').value||null,messages:[{role:'user',content:text}],stream:false};const data=await api('/api/v1/chat/completions',{method:'POST',body:JSON.stringify(body)});addMessage(data.choices?.[0]?.message?.content||'指令已发送')}catch(err){addMessage(err.message,'error')}};
-    function addMessage(text,kind=''){const n=document.createElement('div');n.className='msg '+kind;n.textContent=text;$('messages').appendChild(n);$('messages').scrollTop=$('messages').scrollHeight}
-    async function loadAdmin(){if(state.user?.role!=='ADMIN')return;$('adminCard').classList.remove('hidden');try{const [data,config,devices]=await Promise.all([api('/api/v1/admin/users'),api('/api/v1/admin/system/config'),api('/api/v1/admin/devices')]);$('adminStats').textContent=`普通用户 ${config.current_registered_users}/${config.max_registered_users} · 设备 ${devices.length} · 在线 ${devices.filter(x=>x.online).length}`;$('adminUsers').innerHTML=data.users.map(u=>`<tr><td>${escapeHtml(u.username)}</td><td>${u.role}</td><td>${u.device_count}</td><td>${u.status?'启用':'禁用'}</td><td><button class="btn" onclick="toggleUser('${u.id}',${u.status?0:1})">${u.status?'禁用':'启用'}</button></td></tr>`).join('');$('adminDevices').textContent=devices.map(d=>`${d.device_name} (${d.owner_username}, ${d.online?'在线':'离线'})`).join(' · ')||'暂无设备';$('allowRegistration').checked=config.allow_user_registration;$('requireInvite').checked=config.require_invite_code;$('maxUsers').value=config.max_registered_users;$('maxDevices').value=config.max_devices_per_user;$('maxInvites').value=config.max_invites_per_user}catch(err){toast(err.message)}}
-    async function toggleUser(id,status){try{await api(`/api/v1/admin/users/${id}/status`,{method:'PUT',body:JSON.stringify({status})});await loadAdmin()}catch(err){toast(err.message)}}
-    $('adminConfigForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/v1/admin/system/config',{method:'PUT',body:JSON.stringify({allow_user_registration:$('allowRegistration').checked,require_invite_code:$('requireInvite').checked,max_registered_users:Number($('maxUsers').value),max_devices_per_user:Number($('maxDevices').value),max_invites_per_user:Number($('maxInvites').value)})});toast('系统配置已保存');await loadAdmin()}catch(err){toast(err.message)}};
-    $('adminInviteBtn').onclick=async()=>{try{const data=await api('/api/v1/admin/invite/generate',{method:'POST',body:JSON.stringify({count:Number($('adminInviteCount').value)})});await navigator.clipboard.writeText(data.codes.join('\n'));toast(`已生成并复制 ${data.codes.length} 个邀请码`)}catch(err){toast(err.message)}};
-    function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-    async function loadAll(){if(!state.token){$('authDialog').classList.remove('hidden');return}$('identity').textContent=`${state.user?.username||''} · ${state.user?.role||'USER'}`;try{await Promise.all([loadDevices(),loadInvites(),loadAdmin()]);$('authDialog').classList.add('hidden')}catch(err){if(/token|disabled/i.test(err.message)){localStorage.clear();location.reload()}toast(err.message)}}
-    loadAll();
-  </script>
-</body>
+<html lang="zh-CN" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TVBox AI 控制中心</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script type="module" crossorigin src="/assets/index-CqWOUxtp.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vue-vendor-CeqkeS-r.js">
+    <link rel="modulepreload" crossorigin href="/assets/element-plus-Cb-yj62V.js">
+    <link rel="modulepreload" crossorigin href="/assets/axios-CzApALvg.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-DUG0-Ruh.css">
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
 </html>

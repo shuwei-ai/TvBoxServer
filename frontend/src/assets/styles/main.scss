@@ -7,96 +7,124 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background-color: var(--app-bg);
   color: var(--app-text-primary);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  line-height: 1.5;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 html.dark body {
-  background: radial-gradient(circle at 15% 0%, #123150 0%, transparent 40%),
-              radial-gradient(circle at 85% 90%, #0d283e 0%, transparent 45%),
+  background: radial-gradient(circle at 10% 0%, #151821 0%, transparent 40%),
+              radial-gradient(circle at 90% 100%, #11141a 0%, transparent 50%),
               var(--app-bg);
 }
 
-html body {
-  background: radial-gradient(circle at 15% 0%, #e0f2fe 0%, transparent 40%),
+html:not(.dark) body {
+  background: radial-gradient(circle at 10% 0%, #edf1f8 0%, transparent 45%),
+              radial-gradient(circle at 90% 100%, #f0f3f8 0%, transparent 50%),
               var(--app-bg);
 }
 
-/* 玻璃质感通用面板 */
-.glass-card {
+/* 现代卡片与 Bento 容器 */
+.glass-card,
+.bento-card {
   background: var(--app-panel-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--app-card-border);
-  border-radius: 16px;
-  box-shadow: var(--app-shadow);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--app-hairline);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-card);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
-    border-color: rgba(94, 234, 212, 0.4);
+    border-color: var(--app-hairline-strong);
   }
 }
 
-/* 呼吸指示灯 */
+/* 呼吸状态灯与 Live Pill (借鉴 live-dashboard) */
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--app-surface-subtle);
+  border: 1px solid var(--app-hairline);
+  color: var(--app-text-secondary);
+
+  &.live {
+    background: var(--app-success-subtle);
+    border-color: rgba(16, 185, 129, 0.25);
+    color: var(--app-success);
+  }
+
+  &.warning {
+    background: var(--app-warning-subtle);
+    border-color: rgba(245, 158, 11, 0.25);
+    color: var(--app-warning);
+  }
+}
+
 .online-dot {
   display: inline-block;
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background-color: #64748b;
-  margin-right: 6px;
-  transition: all 0.3s ease;
+  background-color: var(--app-text-muted);
+  flex-shrink: 0;
+  transition: all 0.25s ease;
 
   &.active {
     background-color: var(--app-success);
-    box-shadow: 0 0 10px var(--app-glow-online);
-    animation: breathing 2s infinite ease-in-out;
+    box-shadow: 0 0 8px var(--app-glow-online);
+    animation: pulse-dot 2s infinite ease-in-out;
+  }
+
+  &.offline {
+    background-color: var(--app-text-muted);
+    opacity: 0.6;
   }
 }
 
-@keyframes breathing {
+@keyframes pulse-dot {
   0% {
-    box-shadow: 0 0 4px var(--app-glow-online);
+    box-shadow: 0 0 2px var(--app-glow-online);
     transform: scale(0.95);
   }
   50% {
-    box-shadow: 0 0 12px var(--app-glow-online), 0 0 4px #fff;
+    box-shadow: 0 0 10px var(--app-glow-online), 0 0 3px rgba(255, 255, 255, 0.8);
     transform: scale(1.15);
   }
   100% {
-    box-shadow: 0 0 4px var(--app-glow-online);
+    box-shadow: 0 0 2px var(--app-glow-online);
     transform: scale(0.95);
   }
 }
 
-/* 自定义代码/Key块 */
+/* Linear 风格等宽代码块 */
 .code-box {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  background: rgba(8, 18, 31, 0.7);
-  border: 1px dashed rgba(94, 234, 212, 0.3);
-  padding: 12px 14px;
-  border-radius: 10px;
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
+  background: var(--app-surface-subtle);
+  border: 1px solid var(--app-hairline);
+  padding: 10px 14px;
+  border-radius: var(--app-radius-md);
   color: var(--app-accent);
   word-break: break-all;
-  font-size: 13px;
-  letter-spacing: 0.5px;
-}
-
-html:not(.dark) .code-box {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #0f766e;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
 }
 
 /* 滚动条定制 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -104,16 +132,78 @@ html:not(.dark) .code-box {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
+  background: var(--app-hairline-strong);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.5);
+  background: var(--app-text-muted);
 }
 
-/* Element Plus 适配调整 */
+/* Element Plus 深度定制与覆盖 */
+:root {
+  --el-color-primary: #5e6ad2;
+  --el-color-primary-light-3: #7e8bf8;
+  --el-color-primary-light-5: #9da7fa;
+  --el-color-primary-light-7: #c5ccfc;
+  --el-color-primary-light-9: #eef0ff;
+  --el-color-primary-dark-2: #4e5ac0;
+}
+
+html.dark {
+  --el-color-primary: #6875f5;
+  --el-color-primary-light-3: #8a94f8;
+  --el-color-primary-light-7: #2a2d48;
+  --el-color-primary-light-9: #1c1d2e;
+  --el-color-primary-dark-2: #525ec7;
+}
+
+.el-button {
+  font-weight: 500;
+  border-radius: var(--app-radius-sm);
+  transition: all 0.15s ease;
+  
+  &--primary {
+    --el-button-bg-color: var(--app-accent);
+    --el-button-border-color: var(--app-accent);
+    --el-button-hover-bg-color: var(--app-accent-hover);
+    --el-button-hover-border-color: var(--app-accent-hover);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+}
+
 .el-card {
-  --el-card-border-color: var(--app-card-border);
-  --el-card-bg-color: var(--app-panel-bg);
+  --el-card-border-color: var(--app-hairline);
+  --el-card-bg-color: var(--app-surface);
+  border-radius: var(--app-radius-lg);
+}
+
+.el-dialog {
+  border-radius: var(--app-radius-lg);
+  background: var(--app-panel-bg);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--app-hairline-strong);
+  box-shadow: var(--app-shadow-elevated);
+}
+
+.el-table {
+  --el-table-border-color: var(--app-hairline);
+  --el-table-header-bg-color: var(--app-surface-subtle);
+  --el-table-tr-bg-color: transparent;
+  --el-table-hover-bg-color: var(--app-surface-hover);
+  background-color: transparent;
+  font-size: 13px;
+  
+  th.el-table__cell {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--app-text-muted);
+  }
+}
+
+.el-tag {
+  font-weight: 500;
+  border-radius: 999px;
 }

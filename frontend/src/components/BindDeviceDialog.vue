@@ -2,7 +2,7 @@
   <el-dialog
     v-model="visible"
     title="绑定新 TVBox 设备"
-    width="460px"
+    width="440px"
     destroy-on-close
     append-to-body
     class="custom-dialog"
@@ -20,13 +20,13 @@
           placeholder="例如：tvbox_living_room"
           clearable
         />
-        <div class="field-hint">需与 TVBox 客户端中设置的设备唯一标识保持一致</div>
+        <div class="field-hint">需与电视终端/模拟器中配置的设备唯一 ID 保持一致</div>
       </el-form-item>
 
       <el-form-item label="设备名称" prop="device_name">
         <el-input
           v-model="formData.device_name"
-          placeholder="例如：客厅电视 / 卧室小米电视"
+          placeholder="例如：客厅电视 / 卧室 TV"
           clearable
         />
       </el-form-item>
@@ -34,9 +34,9 @@
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="visible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">
-          立即绑定
+        <el-button size="small" @click="visible = false">取消</el-button>
+        <el-button type="primary" size="small" :loading="submitting" @click="handleSubmit">
+          确认绑定
         </el-button>
       </div>
     </template>
@@ -105,7 +105,7 @@ defineExpose({
 
 <style scoped lang="scss">
 .field-hint {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--app-text-muted);
   margin-top: 4px;
 }
@@ -113,6 +113,6 @@ defineExpose({
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
 }
 </style>

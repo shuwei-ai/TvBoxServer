@@ -7,3 +7,4 @@ frontend/dist/
 .idea
 docs/superpowers/
 backend/__pycache__/
+backend/static

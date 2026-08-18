@@ -1,31 +1,95 @@
 :root {
-  --app-bg: #f8fafc;
+  /* 基础与表面配色 (Linear Light) */
+  --app-bg: #f4f5f7;
+  --app-surface: #ffffff;
+  --app-surface-subtle: #f8f9fb;
+  --app-surface-hover: #f1f3f5;
   --app-panel-bg: rgba(255, 255, 255, 0.95);
-  --app-card-border: rgba(226, 232, 240, 0.8);
-  --app-text-primary: #0f172a;
-  --app-text-muted: #64748b;
-  --app-accent: #0d9488;
-  --app-accent-glow: rgba(13, 148, 136, 0.25);
+  
+  /* 边框与发丝线 */
+  --app-hairline: rgba(0, 0, 0, 0.08);
+  --app-hairline-strong: rgba(0, 0, 0, 0.15);
+  --app-card-border: rgba(0, 0, 0, 0.08);
+  
+  /* 字体排版色彩 */
+  --app-text-primary: #111827;
+  --app-text-secondary: #4b5563;
+  --app-text-muted: #9ca3af;
+  
+  /* 强调色与状态色 (Linear Indigo & Status Dots) */
+  --app-accent: #5e6ad2;
+  --app-accent-hover: #4e5ac0;
+  --app-accent-subtle: rgba(94, 106, 210, 0.08);
+  --app-accent-glow: rgba(94, 106, 210, 0.25);
+  
   --app-blue: #3b82f6;
-  --app-danger: #ef4444;
+  --app-blue-subtle: rgba(59, 130, 246, 0.08);
+  
   --app-success: #10b981;
-  --app-glow-online: rgba(16, 185, 129, 0.4);
-  --app-header-bg: rgba(255, 255, 255, 0.85);
-  --app-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  --app-success-subtle: rgba(16, 185, 129, 0.1);
+  --app-glow-online: rgba(16, 185, 129, 0.35);
+  
+  --app-warning: #f59e0b;
+  --app-warning-subtle: rgba(245, 158, 11, 0.1);
+  
+  --app-danger: #ef4444;
+  --app-danger-subtle: rgba(239, 68, 68, 0.1);
+  
+  /* 阴影与圆角 */
+  --app-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+  --app-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 10px 25px -5px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --app-shadow-elevated: 0 20px 30px -10px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  
+  --app-radius-lg: 14px;
+  --app-radius-md: 10px;
+  --app-radius-sm: 6px;
+  
+  /* 顶栏 */
+  --app-header-bg: rgba(255, 255, 255, 0.88);
 }
 
 html.dark {
-  --app-bg: #07111f;
-  --app-panel-bg: rgba(16, 29, 45, 0.85);
-  --app-card-border: rgba(37, 54, 75, 0.8);
-  --app-text-primary: #edf4ff;
-  --app-text-muted: #94a3b8;
-  --app-accent: #5eead4;
-  --app-accent-glow: rgba(94, 234, 212, 0.3);
+  /* 基础与表面配色 (Linear Dark) */
+  --app-bg: #0b0c0e;
+  --app-surface: #14161a;
+  --app-surface-subtle: #1a1c22;
+  --app-surface-hover: #21242b;
+  --app-panel-bg: rgba(20, 22, 26, 0.92);
+  
+  /* 边框与发丝线 */
+  --app-hairline: rgba(255, 255, 255, 0.07);
+  --app-hairline-strong: rgba(255, 255, 255, 0.14);
+  --app-card-border: rgba(255, 255, 255, 0.08);
+  
+  /* 字体排版色彩 */
+  --app-text-primary: #f3f4f6;
+  --app-text-secondary: #9ca3af;
+  --app-text-muted: #6b7280;
+  
+  /* 强调色与状态色 */
+  --app-accent: #6875f5;
+  --app-accent-hover: #7e8bf8;
+  --app-accent-subtle: rgba(104, 117, 245, 0.15);
+  --app-accent-glow: rgba(104, 117, 245, 0.35);
+  
   --app-blue: #60a5fa;
-  --app-danger: #fb7185;
+  --app-blue-subtle: rgba(96, 165, 250, 0.12);
+  
   --app-success: #34d399;
-  --app-glow-online: rgba(52, 211, 153, 0.6);
-  --app-header-bg: rgba(11, 22, 38, 0.8);
-  --app-shadow: 0 15px 50px rgba(0, 0, 0, 0.45);
+  --app-success-subtle: rgba(52, 211, 153, 0.15);
+  --app-glow-online: rgba(52, 211, 153, 0.5);
+  
+  --app-warning: #fbbf24;
+  --app-warning-subtle: rgba(251, 191, 36, 0.15);
+  
+  --app-danger: #f87171;
+  --app-danger-subtle: rgba(248, 113, 113, 0.15);
+  
+  /* 阴影与圆角 */
+  --app-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  --app-shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --app-shadow-elevated: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  
+  /* 顶栏 */
+  --app-header-bg: rgba(14, 16, 20, 0.85);
 }
