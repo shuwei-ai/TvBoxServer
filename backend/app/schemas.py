@@ -22,6 +22,16 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class WxSessionCreateRequest(BaseModel):
+    biz_state: Optional[str] = Field(default="tvbox-web-login", max_length=128)
+    expire_seconds: Optional[int] = Field(default=300, ge=60, le=600)
+
+
+class WxAuthCompleteRequest(BaseModel):
+    session_no: str = Field(min_length=1, max_length=128)
+    invite_code: Optional[str] = None
+
+
 class DeviceBindRequest(BaseModel):
     device_id: str = Field(min_length=3, max_length=128)
     device_name: str = Field(min_length=1, max_length=64)

@@ -3,8 +3,17 @@ from typing import Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from .dependencies import admin_user, current_user, get_repository
+from .dreamauth import DreamAuthException, dreamauth_client
 from .repository import ConflictError, QuotaError, Repository, public
-from .schemas import AdminInviteRequest, DeviceBindRequest, DeviceUpdateRequest, LoginRequest, RegisterRequest, SystemConfigRequest, UserStatusRequest
+from .schemas import (
+    AdminInviteRequest,
+    DeviceBindRequest,
+    DeviceUpdateRequest,
+    SystemConfigRequest,
+    UserStatusRequest,
+    WxAuthCompleteRequest,
+    WxSessionCreateRequest,
+)
 from .security import create_access_token
 
 
@@ -20,25 +29,80 @@ def token_data(user: Dict[str, Any], repository: Repository) -> Dict[str, Any]:
     return {"access_token": token, "token_type": "bearer", "user": public(user)}
 
 
-@router.post("/auth/register", status_code=status.HTTP_201_CREATED)
-async def register(body: RegisterRequest, repository: Repository = Depends(get_repository)):
+@router.post("/auth/wechat/session")
+async def create_wechat_session(
+    body: Optional[WxSessionCreateRequest] = None,
+    _repository: Repository = Depends(get_repository)
+):
     try:
-        user = await repository.register(body.username, body.password, body.invite_code)
+        biz_state = body.biz_state if body and body.biz_state else "tvbox-web-login"
+        expire_seconds = body.expire_seconds if body and body.expire_seconds else 300
+        session_data = dreamauth_client.create_session(
+            biz_code="LOGIN",
+            biz_state=biz_state,
+            expire_seconds=expire_seconds
+        )
+    except DreamAuthException as exc:
+        raise HTTPException(
+            status_code=exc.code if 400 <= exc.code < 600 else 500,
+            detail=exc.message
+        )
+    return response(session_data, "扫码会话创建成功")
+
+
+@router.get("/auth/wechat/status")
+async def check_wechat_status(
+    session_no: str,
+    _repository: Repository = Depends(get_repository)
+):
+    if not session_no:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "session_no 不能为空")
+    try:
+        status_data = dreamauth_client.get_session_status(session_no)
+    except DreamAuthException as exc:
+        raise HTTPException(
+            status_code=exc.code if 400 <= exc.code < 600 else 500,
+            detail=exc.message
+        )
+    return response(status_data)
+
+
+@router.post("/auth/wechat/complete")
+async def complete_wechat_auth(
+    body: WxAuthCompleteRequest,
+    repository: Repository = Depends(get_repository)
+):
+    try:
+        result_data = dreamauth_client.get_session_result(body.session_no, consume=True)
+    except DreamAuthException as exc:
+        raise HTTPException(
+            status_code=exc.code if 400 <= exc.code < 600 else 500,
+            detail=exc.message
+        )
+
+    openid = result_data.get("openid")
+    if not openid:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "未获取到微信用户身份授权")
+
+    try:
+        user = await repository.login_or_register_by_openid(
+            openid=openid,
+            invite_code=body.invite_code,
+            member_role=result_data.get("member_role")
+        )
     except QuotaError as exc:
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc))
     except ConflictError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
-    except ValueError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
-    return response(token_data(user, repository), "注册成功")
+    except Exception as exc:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"登录失败: {exc}")
 
-
-@router.post("/auth/login")
-async def login(body: LoginRequest, repository: Repository = Depends(get_repository)):
-    user = await repository.authenticate_user(body.username, body.password)
-    if not user:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "用户名或密码错误")
     return response(token_data(user, repository), "登录成功")
+
+
+@router.get("/auth/me")
+async def get_current_user_profile(user=Depends(current_user)):
+    return response({"user": public(user)})
 
 
 @router.get("/invite/my-codes")

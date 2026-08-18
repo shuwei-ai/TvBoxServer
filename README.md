@@ -91,7 +91,6 @@ ai_tv_controller/
 │   │   ├── repository.py     # MongoDB 异步数据访问层 & 内存兜底仓储
 │   │   ├── schemas.py        # Pydantic 数据契约模型
 │   │   └── security.py       # 密码哈希 (bcrypt) 与 JWT 生成校验
-│   ├── static/               # 前端打包静态资源产物
 │   ├── server.py             # FastAPI 服务主入口 & OpenAI 兼容接口
 │   ├── langchain_agent.py    # LangChain Agent 意图识别与指令调度
 │   ├── mock_tvbox.py         # TVBox 设备端模拟器 (用于本地调试)

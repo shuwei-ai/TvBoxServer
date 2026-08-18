@@ -14,6 +14,11 @@ class Settings:
     bootstrap_admin_password: str = os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "")
     cors_origins: tuple = tuple(x.strip() for x in os.getenv("CORS_ORIGINS", "").split(",") if x.strip())
     root_path: str = os.getenv("ROOT_PATH", "")
+    dreamauth_base_url: str = os.getenv("DREAMAUTH_BASE_URL", "https://guangyingzhimeng.dpdns.org/kite-hub").rstrip("/")
+    dreamauth_app_code: str = os.getenv("DREAMAUTH_APP_CODE", "")
+    dreamauth_access_key: str = os.getenv("DREAMAUTH_ACCESS_KEY", os.getenv("DREAMAUTH_AK", ""))
+    dreamauth_secret_key: str = os.getenv("DREAMAUTH_SECRET_KEY", os.getenv("DREAMAUTH_SK", ""))
+    admin_openids: tuple = tuple(x.strip() for x in os.getenv("ADMIN_OPENIDS", "").split(",") if x.strip())
 
 
 settings = Settings()

@@ -5,8 +5,12 @@ export interface UserInfo {
   username: string
   role: UserRole
   status: number // 1: active, 0: disabled
+  openid?: string
+  device_count?: number
+  invite_generated_count?: number
   created_at?: string
-  last_login?: string
+  updated_at?: string
+  last_login_at?: string
 }
 
 export interface AuthResponse {
@@ -15,13 +19,24 @@ export interface AuthResponse {
   user: UserInfo
 }
 
-export interface LoginParams {
-  username: string
-  password: string
+export interface WxSessionData {
+  session_no: string
+  scene: string
+  qrcode: string
+  expire_at: string
+  app_code?: string
 }
 
-export interface RegisterParams {
-  username: string
-  password: string
+export interface WxStatusData {
+  session_no: string
+  scene?: string
+  status: number // 1: waiting, 2: scanned, 3: authorized, 4: canceled, 6: consumed, 7: expired
+  expire_at?: string
+  auth_time?: string
+  member_role?: number
+}
+
+export interface WxCompleteParams {
+  session_no: string
   invite_code?: string
 }

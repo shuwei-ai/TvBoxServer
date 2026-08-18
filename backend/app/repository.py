@@ -61,7 +61,8 @@ class Repository:
         if self.db is None:
             await self._bootstrap_admin()
             return
-        await self.db.users.create_index([("username", ASCENDING)], unique=True)
+        await self.db.users.create_index([("openid", ASCENDING)], unique=True, sparse=True)
+        await self.db.users.create_index([("username", ASCENDING)], unique=True, sparse=True)
         await self.db.invite_codes.create_index([("code", ASCENDING)], unique=True)
         await self.db.invite_codes.create_index([("created_by", ASCENDING)])
         await self.db.api_keys.create_index([("key_hash", ASCENDING)], unique=True)
@@ -194,6 +195,169 @@ class Repository:
         if self.db is not None:
             return await self.db.users.find_one({"username": normalized})
         return deepcopy(next((u for u in self._users.values() if u["username"] == normalized), None))
+
+    async def get_user_by_openid(self, openid: str) -> Optional[Dict[str, Any]]:
+        if not openid:
+            return None
+        if self.db is not None:
+            return await self.db.users.find_one({"openid": openid})
+        return deepcopy(next((u for u in self._users.values() if u.get("openid") == openid), None))
+
+    async def login_or_register_by_openid(
+        self,
+        openid: str,
+        invite_code: Optional[str] = None,
+        member_role: Optional[int] = None
+    ) -> Dict[str, Any]:
+        if not openid:
+            raise ValueError("微信 OpenID 不能为空")
+
+        existing = await self.get_user_by_openid(openid)
+        if existing:
+            if existing.get("status") != 1:
+                raise QuotaError("该微信绑定的账号已被禁用，请联系管理员")
+            
+            is_admin_configured = openid in self.config.admin_openids
+            update_data: Dict[str, Any] = {"last_login_at": now(), "updated_at": now()}
+            if is_admin_configured and existing.get("role") != "ADMIN":
+                update_data["role"] = "ADMIN"
+            if member_role is not None:
+                update_data["member_role"] = member_role
+                
+            if self.db is not None:
+                return await self.db.users.find_one_and_update(
+                    {"_id": existing["_id"]},
+                    {"$set": update_data},
+                    return_document=ReturnDocument.AFTER
+                )
+            async with self._lock:
+                self._users[existing["_id"]].update(update_data)
+                return deepcopy(self._users[existing["_id"]])
+
+        # 新用户注册流程
+        config = await self.get_config()
+        role = "ADMIN" if openid in self.config.admin_openids else "USER"
+        
+        # 用户名生成，例如 wx_123456
+        suffix = openid[-6:] if len(openid) >= 6 else openid
+        username = f"wx_{suffix}"
+
+        if self.db is not None:
+            if role != "ADMIN":
+                if not config["allow_user_registration"]:
+                    raise QuotaError("系统当前已暂停新用户注册")
+                reserved_quota = await self.db.system_configs.find_one_and_update(
+                    {
+                        "_id": "global_settings",
+                        "allow_user_registration": True,
+                        "$expr": {"$lt": [{"$ifNull": ["$registered_user_count", 0]}, "$max_registered_users"]},
+                    },
+                    {"$inc": {"registered_user_count": 1}},
+                    return_document=ReturnDocument.AFTER,
+                )
+                if not reserved_quota:
+                    raise QuotaError("系统注册人数已达上限")
+            
+            invite = None
+            if config["require_invite_code"] and role != "ADMIN":
+                if not invite_code:
+                    if role != "ADMIN":
+                        await self.db.system_configs.update_one({"_id": "global_settings"}, {"$inc": {"registered_user_count": -1}})
+                    raise ConflictError("系统已开启邀请注册模式，请输入邀请码")
+                invite = await self.db.invite_codes.find_one_and_update(
+                    {"code": invite_code, "status": "UNUSED"},
+                    {"$set": {"status": "RESERVED", "reserved_at": now()}},
+                    return_document=ReturnDocument.AFTER,
+                )
+                if not invite:
+                    if role != "ADMIN":
+                        await self.db.system_configs.update_one({"_id": "global_settings"}, {"$inc": {"registered_user_count": -1}})
+                    raise ConflictError("无效或已被使用的邀请码")
+
+            # 确保 username 唯一
+            candidate_username = username
+            counter = 1
+            while await self.db.users.find_one({"username": candidate_username}):
+                candidate_username = f"{username}_{secrets.token_hex(2)}"
+                counter += 1
+                if counter > 5:
+                    candidate_username = f"wx_{uuid.uuid4().hex[:8]}"
+                    break
+
+            doc = {
+                "_id": uuid.uuid4().hex,
+                "openid": openid,
+                "username": candidate_username,
+                "role": role,
+                "status": 1,
+                "registered_invite_code": invite_code,
+                "device_count": 0,
+                "invite_generated_count": 0,
+                "member_role": member_role,
+                "created_at": now(),
+                "updated_at": now(),
+                "last_login_at": now(),
+            }
+            try:
+                await self.db.users.insert_one(doc)
+            except DuplicateKeyError as exc:
+                if role != "ADMIN":
+                    await self.db.system_configs.update_one({"_id": "global_settings"}, {"$inc": {"registered_user_count": -1}})
+                if invite:
+                    await self.db.invite_codes.update_one({"_id": invite["_id"], "status": "RESERVED"}, {"$set": {"status": "UNUSED"}, "$unset": {"reserved_at": ""}})
+                raise ConflictError("该微信用户已注册") from exc
+            except Exception:
+                if role != "ADMIN":
+                    await self.db.system_configs.update_one({"_id": "global_settings"}, {"$inc": {"registered_user_count": -1}})
+                if invite:
+                    await self.db.invite_codes.update_one({"_id": invite["_id"], "status": "RESERVED"}, {"$set": {"status": "UNUSED"}, "$unset": {"reserved_at": ""}})
+                raise
+
+            if invite:
+                await self.db.invite_codes.update_one(
+                    {"_id": invite["_id"], "status": "RESERVED"},
+                    {"$set": {"status": "USED", "used_by": doc["_id"], "used_at": now()}, "$unset": {"reserved_at": ""}},
+                )
+            return doc
+
+        # 内存模式
+        async with self._lock:
+            if role != "ADMIN":
+                if not self._config["allow_user_registration"]:
+                    raise QuotaError("系统当前已暂停新用户注册")
+                current_users = sum(1 for u in self._users.values() if u["role"] == "USER")
+                if current_users >= self._config["max_registered_users"]:
+                    raise QuotaError("系统注册人数已达上限")
+            
+            invite = self._invites.get(invite_code or "")
+            if config["require_invite_code"] and role != "ADMIN":
+                if not invite or invite["status"] != "UNUSED":
+                    raise ConflictError("无效或已被使用的邀请码")
+            
+            candidate_username = username
+            if any(u["username"] == candidate_username for u in self._users.values()):
+                candidate_username = f"{username}_{secrets.token_hex(2)}"
+
+            doc = {
+                "_id": uuid.uuid4().hex,
+                "openid": openid,
+                "username": candidate_username,
+                "role": role,
+                "status": 1,
+                "registered_invite_code": invite_code,
+                "device_count": 0,
+                "invite_generated_count": 0,
+                "member_role": member_role,
+                "created_at": now(),
+                "updated_at": now(),
+                "last_login_at": now(),
+            }
+            self._users[doc["_id"]] = doc
+            if role != "ADMIN":
+                self._config["registered_user_count"] = sum(1 for u in self._users.values() if u["role"] == "USER")
+            if invite:
+                invite.update({"status": "USED", "used_by": doc["_id"], "used_at": now()})
+            return deepcopy(doc)
 
     async def authenticate_user(self, username: str, password: str) -> Optional[Dict[str, Any]]:
         user = await self.get_user_by_username(username)

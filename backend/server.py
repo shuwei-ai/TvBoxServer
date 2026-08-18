@@ -5,7 +5,6 @@ TVBox AI Controller Python Backend
 提供:
 1. WebSocket 服务供 TVBox 客户端建立长连接 (/ws/tvbox/{device_id})
 2. REST API (/api/chat) 接收用户文本输入，经 LLM Agent 生成 Tool JSON 并下发给 TVBox
-3. 托管 Web 交互控制前端 (/static/index.html)
 """
 
 import os
@@ -21,8 +20,7 @@ from typing import Dict, Any, Optional, List, Tuple
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, WebSocket, WebSocketDisconnect, HTTPException
-from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -97,9 +95,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-STATIC_DIR = Path(__file__).parent / "static"
-STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _extract_bearer_token(authorization: Optional[str]) -> Optional[str]:
@@ -938,9 +933,6 @@ async def tvbox_ws_endpoint(websocket: WebSocket, device_id: str):
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
-    index_file = STATIC_DIR / "index.html"
-    if index_file.exists():
-        return FileResponse(index_file)
     return "<h1>TVBox AI Controller Backend Running.</h1>"
 
 if __name__ == "__main__":

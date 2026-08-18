@@ -6,7 +6,7 @@ export const routes: RouteRecordRaw[] = [
     name: 'Login',
     component: () => import('@/views/auth/Login.vue'),
     meta: {
-      title: '登录 / 注册 - TVBox AI 控制中心',
+      title: '微信扫码登录 - TVBox AI 控制中心',
       requiresAuth: false,
       guestOnly: true
     }

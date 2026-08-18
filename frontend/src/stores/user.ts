@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { loginApi, registerApi, getMeApi } from '@/api/auth'
+import { completeWxAuthApi, getMeApi } from '@/api/auth'
 import { storage } from '@/utils/storage'
-import type { LoginParams, RegisterParams, UserInfo, UserRole } from '@/types'
+import type { UserInfo, UserRole, WxCompleteParams } from '@/types'
 
 export const useUserStore = defineStore('user', () => {
   const token = ref<string>(storage.getToken())
@@ -13,17 +13,8 @@ export const useUserStore = defineStore('user', () => {
   const username = computed(() => userInfo.value?.username || '')
   const role = computed<UserRole>(() => userInfo.value?.role || 'USER')
 
-  async function login(params: LoginParams) {
-    const res = await loginApi(params)
-    token.value = res.access_token
-    userInfo.value = res.user
-    storage.setToken(res.access_token)
-    storage.setUser(res.user)
-    return res
-  }
-
-  async function register(params: RegisterParams) {
-    const res = await registerApi(params)
+  async function loginWithWechat(params: WxCompleteParams) {
+    const res = await completeWxAuthApi(params)
     token.value = res.access_token
     userInfo.value = res.user
     storage.setToken(res.access_token)
@@ -57,8 +48,7 @@ export const useUserStore = defineStore('user', () => {
     isAdmin,
     username,
     role,
-    login,
-    register,
+    loginWithWechat,
     fetchUserInfo,
     logout
   }

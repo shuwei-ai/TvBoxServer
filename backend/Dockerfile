@@ -11,7 +11,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY server.py langchain_agent.py ./
 COPY app ./app
-COPY static ./static
 
 EXPOSE 8000
 

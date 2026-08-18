@@ -8,3 +8,4 @@ frontend/dist/
 docs/superpowers/
 backend/__pycache__/
 backend/static
+backend/static/index.html
